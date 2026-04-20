@@ -36,12 +36,43 @@ const PanelEventFeed = ({ events }) => {
           </thead>
           <tbody>
             {displayedEvents.map((ev) => {
+              const isCanary = ev.type === 'CANARY_TOKEN_HIT';
+              
+              if (isCanary) {
+                  return (
+                      <tr key={ev.id} style={{ backgroundColor: '#450a0a', borderBottom: '2px solid #ef4444' }}>
+                          <td colSpan="4" style={{ padding: '16px', position: 'relative' }}>
+                              <div className="flex flex-col gap-2">
+                                  <div className="text-red-500 font-bold text-lg animate-pulse uppercase flex items-center gap-2">
+                                      <span>⚠️ CANARY TOKEN HIT</span>
+                                      <span className="text-xs bg-red-600 text-white px-2 py-0.5 rounded">BEYOND CLOUD BOUNDARY</span>
+                                  </div>
+                                  <div className="text-red-200 font-mono text-sm">
+                                      <span className="text-gray-400">File Exfiltrated:</span> {ev.resource_name}
+                                  </div>
+                                  <div className="flex justify-between items-end border-t border-red-900 pt-2 mt-2">
+                                      <div className="flex flex-col">
+                                          <span className="text-xs font-bold text-red-400">ATTACKER MACHINE IP:</span>
+                                          <span className="text-white text-lg font-mono">{ev.attacker_ip}</span>
+                                      </div>
+                                      <div className="flex flex-col text-right">
+                                          <span className="text-xs font-bold text-red-400">USER AGENT IDENTIFIED:</span>
+                                          <span className="text-red-100 font-mono text-xs max-w-sm truncate" title={ev.user_agent}>{ev.user_agent}</span>
+                                      </div>
+                                  </div>
+                              </div>
+                          </td>
+                      </tr>
+                  )
+              }
+
               const riskColor = ev.risk_score >= 70 ? 'var(--accent-red)' : ev.risk_score >= 40 ? 'var(--accent-amber)' : 'var(--accent-cyan)';
               const isHighlight = highlightId === ev.id;
               
               return (
-                <tr key={ev.id} style={{ 
-                  borderBottom: '1px solid var(--border-subtle)',
+                <React.Fragment key={ev.id}>
+                <tr style={{ 
+                  borderBottom: ev.mutation ? 'none' : '1px solid var(--border-subtle)',
                   animation: isHighlight ? (ev.risk_score >= 70 ? 'flashRowRed 1.8s' : 'flashRow 1.5s') : 'none',
                   borderLeft: `3px solid ${riskColor}`,
                   backgroundColor: 'transparent',
@@ -62,6 +93,22 @@ const PanelEventFeed = ({ events }) => {
                     </div>
                   </td>
                 </tr>
+                {ev.mutation && (
+                    <tr style={{ backgroundColor: '#020617', borderBottom: '1px solid var(--border-subtle)', borderLeft: '3px solid #8b5cf6' }}>
+                        <td colSpan="4" style={{ padding: '8px 16px 16px 16px' }}>
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">🕸️</span>
+                                <div className="flex flex-col">
+                                    <span className="text-[#a78bfa] font-bold text-xs">AUTONOMOUS HONEYPOT MUTATION DEPLOYED</span>
+                                    <span className="text-gray-400 font-mono text-xs mt-1">
+                                        Spawned <span className="text-white">s3://{ev.mutation.bucket_name}</span> targeting <span className="text-amber-500">{ev.mutation.category}</span> hunters (Intended trap for {ev.mutation.trigger_ip})
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                )}
+                </React.Fragment>
               )
             })}
             {(!displayedEvents || displayedEvents.length === 0) && (

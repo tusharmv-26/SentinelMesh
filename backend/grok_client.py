@@ -6,7 +6,7 @@ class GrokClient:
         self.api_key = os.environ.get("GROK_API_KEY", "")
         self.endpoint = "https://api.groq.com/openai/v1/chat/completions"
 
-    def generate_audit_explanation(self, ip: str, resource_name: str, risk_score: int, at_risk_resource: str, action: str) -> str:
+    def generate_audit_explanation(self, ip: str, resource_name: str, risk_score: int, at_risk_resource: str, action: str, profiler_context: str = "") -> str:
         fallback = f"Suspicious access from {ip} attempted credential harvesting on decoy asset {resource_name} — risk score {risk_score}/100 — {at_risk_resource} flagged as similar target and access {action} automatically."
         
         if not self.api_key:
@@ -21,6 +21,7 @@ class GrokClient:
         - Risk Score: {risk_score}/100
         - Real Asset at Risk: {at_risk_resource}
         - Action Taken: {action} (e.g., restricted automatically, rolled back)
+        - Threat Intelligence Context: {profiler_context}
         """
 
         try:

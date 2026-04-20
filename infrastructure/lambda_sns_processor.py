@@ -3,7 +3,7 @@ import urllib.request
 import os
 
 # Set this to the public IP or domain of your EC2 FastAPI instance
-FASTAPI_ENDPOINT = os.environ.get('FASTAPI_ENDPOINT', 'http://YOUR_EC2_IP:8000/events')
+FASTAPI_ENDPOINT = os.environ.get('FASTAPI_ENDPOINT', 'http://13.48.58.234:8000/events')
 
 def lambda_handler(event, context):
     try:

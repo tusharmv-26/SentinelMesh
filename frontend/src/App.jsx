@@ -19,9 +19,9 @@ function App() {
 
     const fetchData = async () => {
       try {
-        const eventsRes = await fetch('http://13.60.214.97:8000/events', { method: 'GET' });
-        const auditRes = await fetch('http://13.60.214.97:8000/audit', { method: 'GET' });
-        const statusRes = await fetch('http://13.60.214.97:8000/status', { method: 'GET' });
+        const eventsRes = await fetch('http://13.48.58.234:8000/events', { method: 'GET' });
+        const auditRes = await fetch('http://13.48.58.234:8000/audit', { method: 'GET' });
+        const statusRes = await fetch('http://13.48.58.234:8000/status', { method: 'GET' });
         
         if (eventsRes.ok) setEvents(await eventsRes.json());
         if (auditRes.ok) setAuditLog(await auditRes.json());

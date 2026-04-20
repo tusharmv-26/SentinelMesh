@@ -22,10 +22,10 @@ const PanelRiskGauge = ({ systemStatus }) => {
       <div className="panel-header">
         <span>Risk Assessment</span>
       </div>
-      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         
-        <div style={{ flex: 1, width: '100%', height: '100%' }}>
-          <ResponsiveContainer width="100%" height="100%">
+        <div style={{ flex: 1, width: '100%', minHeight: 0 }}>
+          <ResponsiveContainer width="100%" height="100%" debounce={300}>
             <RadialBarChart 
               cx="50%" 
               cy="50%" 

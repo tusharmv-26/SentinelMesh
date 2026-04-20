@@ -3,6 +3,7 @@ import PanelEventFeed from './PanelEventFeed';
 import PanelRiskGauge from './PanelRiskGauge';
 import PanelWorldMap from './PanelWorldMap';
 import PanelAuditLog from './PanelAuditLog';
+import PanelAttackerIntelligence from './PanelAttackerIntelligence';
 
 const DashboardLayout = ({ events, auditLog, systemStatus }) => {
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -22,7 +23,7 @@ const DashboardLayout = ({ events, auditLog, systemStatus }) => {
         </div>
 
         <nav style={{ flex: 1 }}>
-          {['Dashboard', 'Live Events', 'Audit Log', 'System Parameters'].map((nav) => {
+          {['Dashboard', 'Attacker Intelligence', 'Live Events', 'Audit Log', 'System Parameters'].map((nav) => {
             const isActive = activeTab === nav;
             return (
             <div key={nav} 
@@ -84,6 +85,12 @@ const DashboardLayout = ({ events, auditLog, systemStatus }) => {
         {activeTab === 'Live Events' && (
           <div style={{ flex: 1, padding: '16px', overflow: 'hidden' }}>
              <PanelEventFeed events={events} />
+          </div>
+        )}
+
+        {activeTab === 'Attacker Intelligence' && (
+          <div style={{ flex: 1, padding: '16px', overflow: 'hidden' }}>
+             <PanelAttackerIntelligence />
           </div>
         )}
 
