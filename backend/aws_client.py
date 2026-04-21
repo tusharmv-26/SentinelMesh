@@ -19,7 +19,7 @@ class AWSController:
             return '0.0.0.0/0'
 
     def restrict_security_group(self, instance_id: str) -> bool:
-        if not self.has_credentials:
+        if not self.has_credentials or instance_id.startswith('i-mock') or instance_id.startswith('mock-'):
             print(f"[MOCK AWS] Restricting security group for {instance_id}")
             self.saved_rules[instance_id] = "mock_rules"
             return True
@@ -71,7 +71,7 @@ class AWSController:
             return False
 
     def rollback_security_group(self, instance_id: str) -> bool:
-        if not self.has_credentials:
+        if not self.has_credentials or instance_id.startswith('i-mock') or instance_id.startswith('mock-'):
             print(f"[MOCK AWS] Rolling back security group for {instance_id}")
             if instance_id in self.saved_rules:
                 del self.saved_rules[instance_id]

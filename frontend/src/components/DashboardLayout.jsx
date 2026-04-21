@@ -101,26 +101,73 @@ const DashboardLayout = ({ events, auditLog, systemStatus }) => {
         )}
 
         {activeTab === 'System Parameters' && (
-          <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column' }}>
-            <div className="panel" style={{ flex: 1, display:'flex', flexDirection:'column', justifyContent:'center', alignItems:'center', color: 'var(--text-secondary)' }}>
-              <h2 className="text-gradient-cyan mono" style={{ fontSize:'24px', marginBottom:'16px' }}>System Parameters</h2>
-              <div style={{ display:'flex', gap:'40px', textAlign:'left', marginTop:'20px' }}>
-                 <div>
-                   <p style={{ color:'var(--text-primary)', marginBottom:'8px' }}>Infrastructure Integration</p>
-                   <li>Region: <code>eu-north-1</code></li>
-                   <li>Gateway: <code>AWS API Gateway / ALB</code></li>
-                   <li>Compute: <code>EC2 Amazon Linux 2023</code></li>
-                   <li>Events: <code>S3 -&gt; SNS -&gt; Lambda</code></li>
-                 </div>
-                 <div>
-                   <p style={{ color:'var(--text-primary)', marginBottom:'8px' }}>Intelligence Core</p>
-                   <li>Provider: <code>GroqCloud</code></li>
-                   <li>Model: <code>llama3-8b-8192</code></li>
-                   <li>Heuristics: <code>IP Hist, Keyword Analysis</code></li>
-                   <li>Threshold: <code>&ge; 70 Risk Score</code></li>
-                 </div>
-              </div>
-            </div>
+          <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+                <div style={{ padding: '32px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '4px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ marginBottom: '32px' }}>
+                        <h2 className="mono text-gradient-cyan" style={{ fontSize: '24px', color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '0.05em' }}>CORE SYSTEM ARCHITECTURE</h2>
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Operational parameters, cloud integration flags, and intelligence routing configurations.</p>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '24px' }}>
+                        {/* Infrastructure Box */}
+                        <div style={{ backgroundColor: 'var(--bg-surface-raised)', border: '1px solid var(--border-strong)', borderRadius: '4px', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 6px rgba(0,0,0,0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px' }}>
+                                <span style={{ fontSize: '24px' }}>☁️</span>
+                                <div>
+                                    <h3 style={{ fontSize: '14px', color: 'var(--accent-cyan)', letterSpacing: '0.05em', textTransform: 'uppercase' }} className="mono">AWS Infrastructure</h3>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Cloud compute & ingress network</div>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Primary Region</span>
+                                    <span className="mono" style={{ color: 'var(--text-primary)', fontSize: '12px', backgroundColor: 'var(--bg-base)', padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--border-strong)' }}>eu-north-1</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Gateway Routing</span>
+                                    <span className="mono" style={{ color: 'var(--text-primary)', fontSize: '12px', backgroundColor: 'var(--bg-base)', padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--border-strong)' }}>API Gateway / ALB</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Compute Node</span>
+                                    <span className="mono" style={{ color: 'var(--text-primary)', fontSize: '12px', backgroundColor: 'var(--bg-base)', padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--border-strong)' }}>EC2 Amazon Linux</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Event Pipeline</span>
+                                    <span className="mono" style={{ color: 'var(--accent-amber)', fontSize: '12px', backgroundColor: 'var(--accent-amber-dim)', padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--accent-amber)', boxShadow: '0 0 10px rgba(245, 158, 11, 0.1)' }}>S3 → SNS → Lambda</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Intelligence Box */}
+                        <div style={{ backgroundColor: 'var(--bg-surface-raised)', border: '1px solid var(--border-strong)', borderRadius: '4px', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 6px rgba(0,0,0,0.2)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '16px' }}>
+                                <span style={{ fontSize: '24px' }}>🧠</span>
+                                <div>
+                                    <h3 style={{ fontSize: '14px', color: '#a855f7', letterSpacing: '0.05em', textTransform: 'uppercase' }} className="mono">Intelligence Core</h3>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>AI heuristics & inference engine</div>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>LLM Provider</span>
+                                    <span className="mono" style={{ color: 'var(--text-primary)', fontSize: '12px', backgroundColor: 'var(--bg-base)', padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--border-strong)' }}>GroqCloud API</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Inference Model</span>
+                                    <span className="mono" style={{ color: '#d8b4fe', fontSize: '12px', backgroundColor: '#3b0764', padding: '6px 12px', borderRadius: '4px', border: '1px solid #9333ea', boxShadow: '0 0 10px rgba(147, 51, 234, 0.15)' }}>Llama-3-8b-8192</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Engine Modules</span>
+                                    <span className="mono" style={{ color: 'var(--text-primary)', fontSize: '12px', backgroundColor: 'var(--bg-base)', padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--border-strong)' }}>IP Hist, Tor, Behaviors</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Action Threshold</span>
+                                    <span className="mono" style={{ color: 'var(--accent-red)', fontSize: '12px', backgroundColor: 'var(--accent-red-dim)', padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--accent-red)', boxShadow: '0 0 10px rgba(239, 68, 68, 0.15)' }}>≥ 70 Risk Score</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
           </div>
         )}
 

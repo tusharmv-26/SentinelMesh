@@ -24,12 +24,19 @@ const PanelAttackerIntelligence = () => {
 
     const getThreatColor = (t) => {
         switch (t) {
-            case 'CRITICAL': return { bg: 'from-red-600/20 to-red-900/10', border: 'border-red-500/40', text: 'text-red-400', badge: '#dc2626' };
-            case 'HIGH': return { bg: 'from-orange-600/20 to-orange-900/10', border: 'border-orange-500/40', text: 'text-orange-400', badge: '#ea580c' };
-            case 'MEDIUM': return { bg: 'from-yellow-600/20 to-yellow-900/10', border: 'border-yellow-500/40', text: 'text-yellow-400', badge: '#eab308' };
-            case 'LOW': return { bg: 'from-green-600/20 to-green-900/10', border: 'border-green-500/40', text: 'text-green-400', badge: '#22c55e' };
-            default: return { bg: 'from-gray-600/20 to-gray-900/10', border: 'border-gray-500/40', text: 'text-gray-400', badge: '#4b5563' };
+            case 'CRITICAL': return 'var(--accent-red)';
+            case 'HIGH': return 'var(--accent-amber)';
+            case 'MEDIUM': return '#eab308'; // raw yellow
+            case 'LOW': return 'var(--accent-green)';
+            default: return 'var(--text-secondary)';
         }
+    };
+    
+    const getEscalationColor = (score) => {
+        if (score >= 75) return 'var(--accent-red)';
+        if (score >= 50) return 'var(--accent-amber)';
+        if (score >= 25) return '#eab308';
+        return 'var(--accent-green)';
     };
 
     const getBehaviorIcon = (b) => {
@@ -53,163 +60,176 @@ const PanelAttackerIntelligence = () => {
         }
     };
 
-    const getEscalationColor = (score) => {
-        if (score >= 75) return 'from-red-500 to-red-600';
-        if (score >= 50) return 'from-orange-500 to-orange-600';
-        if (score >= 25) return 'from-yellow-500 to-yellow-600';
-        return 'from-green-500 to-green-600';
-    };
-
     if (loading && profiles.length === 0) {
         return (
-            <div className="h-full w-full flex items-center justify-center">
-                <div className="text-center">
-                    <div className="text-cyan-500/60 font-mono text-sm mb-2">⟳ INTELLIGENCE MATRIX INITIALIZING</div>
-                    <div className="w-8 h-8 border-2 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin mx-auto"></div>
+            <div style={{ height: '100%', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center' }}>
+                    <div className="mono" style={{ color: 'var(--accent-cyan)', fontSize: '13px', marginBottom: '8px' }}>⟳ INTELLIGENCE MATRIX INITIALIZING</div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="h-full w-full flex flex-col pt-4 pb-6 px-4 gap-4 overflow-y-auto custom-scrollbar">
+        <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', padding: '16px 8px 24px 8px', gap: '16px', overflowY: 'auto' }}>
             {profiles.length === 0 ? (
-                <div className="flex h-full items-center justify-center">
-                    <div className="text-center">
-                        <div className="text-5xl mb-3">🛡️</div>
-                        <div className="text-gray-500 font-sans text-sm">No Active Threats Detected</div>
-                        <div className="text-gray-600 font-mono text-xs mt-1">Awaiting attacker profiles...</div>
+                <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '32px', marginBottom: '12px' }}>🛡️</div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>No Active Threats Detected</div>
+                        <div className="mono" style={{ color: 'var(--text-mono)', fontSize: '11px', marginTop: '4px' }}>Awaiting attacker profiles...</div>
                     </div>
                 </div>
             ) : (
                 profiles.map((p, idx) => {
-                    const threatStyle = getThreatColor(p.threat_level);
+                    const threatColor = getThreatColor(p.threat_level);
                     return (
-                        <div 
-                            key={idx}
-                            className={`group relative overflow-hidden rounded-xl backdrop-blur-xl border ${threatStyle.border} bg-gradient-to-br ${threatStyle.bg} p-5 transition-all duration-300 hover:shadow-lg hover:shadow-cyan-500/10 hover:border-cyan-500/60 hover:scale-105 transform`}
-                        >
-                            {/* Animated background gradient */}
-                            <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none" style={{background: `radial-gradient(circle at 50% 50%, ${threatStyle.badge}, transparent)`}}></div>
+                        <div key={idx} className="panel" style={{ 
+                            display: 'flex', flexDirection: 'column', padding: '16px', 
+                            borderLeft: `4px solid ${threatColor}`,
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+                            marginBottom: '16px'
+                        }}>
                             
-                            {/* Main Content */}
-                            <div className="relative z-10 flex flex-col">
-                                
-                                {/* Top Section: IP + Threat Level */}
-                                <div className="flex items-start justify-between mb-4 pb-4 border-b border-white/10">
-                                    <div className="flex-1">
-                                        <div className="font-mono text-xl font-bold text-cyan-300 mb-1 tracking-wider">{p.ip}</div>
-                                        <div className="text-xs font-sans text-gray-500 uppercase tracking-wide">IP Address</div>
+                            {/* Top Section: IP + Threat Level */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--border-strong)' }}>
+                                <div style={{ flex: 1 }}>
+                                    <div className="mono" style={{ fontSize: '20px', fontWeight: 700, color: 'var(--accent-cyan)', letterSpacing: '1px', marginBottom: '4px' }}>
+                                        {p.ip}
                                     </div>
-                                    <div className={`px-4 py-2 rounded-lg font-mono text-xs font-bold text-white ${threatStyle.text} border ${threatStyle.border}`} style={{backgroundColor: `${threatStyle.badge}20`}}>
-                                        <div>{p.threat_level}</div>
-                                        <div className="text-[10px] opacity-75">THREAT</div>
+                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                        IP Address Profile
+                                    </div>
+                                </div>
+                                <div style={{ 
+                                    padding: '6px 12px', borderRadius: '4px', textAlign: 'center',
+                                    border: `1px solid ${threatColor}`, backgroundColor: `${threatColor}20` 
+                                }}>
+                                    <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: threatColor }}>
+                                        {p.threat_level}
+                                    </div>
+                                    <div style={{ fontSize: '9px', color: 'var(--text-primary)', marginTop: '2px', opacity: 0.8 }}>
+                                        THREAT
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Middle Section: Behavior + Intent Grid */}
+                            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                                {/* Behavior Card */}
+                                <div style={{ flex: 1, backgroundColor: 'var(--bg-surface-raised)', border: '1px solid var(--border-subtle)', borderRadius: '4px', padding: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                        <span style={{ fontSize: '16px' }}>{getBehaviorIcon(p.behavior_type)}</span>
+                                        <div className="mono" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-mono)', textTransform: 'uppercase' }}>Behavior</div>
+                                    </div>
+                                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent-cyan)', textTransform: 'capitalize' }}>
+                                        {(p.behavior_type || 'Unknown').replace(/_/g, ' ')}
                                     </div>
                                 </div>
 
-                                {/* Middle Section: Behavior + Intent Grid */}
-                                <div className="grid grid-cols-2 gap-3 mb-4">
-                                    {/* Behavior Card */}
-                                    <div className="bg-white/5 border border-white/10 rounded-lg p-3 hover:bg-white/10 transition-colors">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-lg">{getBehaviorIcon(p.behavior_type)}</span>
-                                            <div className="text-[10px] font-mono font-bold text-gray-400 uppercase">Behavior</div>
-                                        </div>
-                                        <div className="font-sans text-sm font-semibold text-cyan-300 capitalize">
-                                            {(p.behavior_type || 'Unknown').replace(/_/g, ' ')}
-                                        </div>
+                                {/* Intent Card */}
+                                <div style={{ flex: 1, backgroundColor: 'var(--bg-surface-raised)', border: '1px solid var(--border-subtle)', borderRadius: '4px', padding: '12px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                        <span style={{ fontSize: '16px' }}>{getIntentIcon(p.intent)}</span>
+                                        <div className="mono" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-mono)', textTransform: 'uppercase' }}>Intent</div>
                                     </div>
-
-                                    {/* Intent Card */}
-                                    <div className="bg-white/5 border border-white/10 rounded-lg p-3 hover:bg-white/10 transition-colors">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-lg">{getIntentIcon(p.intent)}</span>
-                                            <div className="text-[10px] font-mono font-bold text-gray-400 uppercase">Intent</div>
-                                        </div>
-                                        <div className="font-sans text-sm font-semibold text-amber-300 capitalize">
-                                            {(p.intent || 'Unknown').replace(/_/g, ' ')}
-                                        </div>
+                                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent-amber)', textTransform: 'capitalize' }}>
+                                        {(p.intent || 'Unknown').replace(/_/g, ' ')}
                                     </div>
                                 </div>
+                            </div>
 
-                                {/* Status Badges */}
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    {p.is_tor && (
-                                        <div className="px-3 py-1.5 bg-red-500/20 border border-red-500/50 rounded-lg flex items-center gap-2 animate-pulse">
-                                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                                            <span className="font-mono text-xs font-bold text-red-300 uppercase">Tor Exit</span>
-                                        </div>
-                                    )}
-                                    {p.is_datacenter && !p.is_tor && (
-                                        <div className="px-3 py-1.5 bg-yellow-500/20 border border-yellow-500/50 rounded-lg flex items-center gap-2">
-                                            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                            <span className="font-mono text-xs font-bold text-yellow-300 uppercase">Datacenter</span>
-                                        </div>
-                                    )}
-                                    <div className="px-3 py-1.5 bg-cyan-500/20 border border-cyan-500/50 rounded-lg">
-                                        <span className="font-mono text-xs font-bold text-cyan-300 uppercase">
-                                            {p.access_count || 0} Targets
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Escalation Probability Bar */}
-                                <div className="mb-4">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="font-sans text-xs font-semibold text-gray-400 uppercase tracking-wide">Escalation Probability</span>
-                                        <span className={`font-mono text-sm font-bold ${threatStyle.text}`}>{p.escalation_probability || 0}%</span>
-                                    </div>
-                                    <div className="w-full h-2.5 bg-gray-900/50 rounded-full overflow-hidden border border-white/10">
-                                        <div 
-                                            className={`h-full bg-gradient-to-r ${getEscalationColor(p.escalation_probability)} transition-all duration-1000 ease-out rounded-full shadow-lg shadow-current`}
-                                            style={{width: `${p.escalation_probability || 0}%`}}
-                                        ></div>
-                                    </div>
-                                </div>
-
-                                {/* Metadata Grid */}
-                                <div className="grid grid-cols-3 gap-2 mb-4 text-center py-3 bg-white/5 rounded-lg border border-white/10">
-                                    <div>
-                                        <div className="font-mono text-xs text-gray-500 mb-1">ACTIVE TIME</div>
-                                        <div className="font-mono text-sm font-bold text-cyan-400">{p.session_duration || 0}s</div>
-                                    </div>
-                                    <div className="border-l border-r border-white/10">
-                                        <div className="font-mono text-xs text-gray-500 mb-1">RESOURCES</div>
-                                        <div className="font-mono text-sm font-bold text-orange-400">{p.access_count || 0}</div>
-                                    </div>
-                                    <div>
-                                        <div className="font-mono text-xs text-gray-500 mb-1">ORG</div>
-                                        <div className="font-mono text-sm font-bold text-gray-300 truncate">{(p.org || 'Unknown').slice(0, 15)}</div>
-                                    </div>
-                                </div>
-
-                                {/* Attack Pathway */}
-                                {p.resources_probed && p.resources_probed.length > 0 && (
-                                    <div className="mb-4 p-3 bg-white/5 rounded-lg border border-white/10">
-                                        <div className="font-mono text-xs font-bold text-gray-400 mb-2 uppercase">Attack Pathway</div>
-                                        <div className="flex flex-wrap gap-1 items-center">
-                                            {p.resources_probed.map((res, i) => (
-                                                <React.Fragment key={i}>
-                                                    <div className="font-mono text-xs text-gray-300 bg-gray-900/50 px-2 py-1 rounded border border-gray-700 truncate max-w-[120px]" title={res}>
-                                                        {res}
-                                                    </div>
-                                                    {i < p.resources_probed.length - 1 && <span className="text-cyan-500/60 text-xs">→</span>}
-                                                </React.Fragment>
-                                            ))}
-                                        </div>
+                            {/* Status Badges */}
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+                                {p.is_tor && (
+                                    <div style={{ padding: '6px 12px', backgroundColor: 'var(--accent-red-dim)', border: '1px solid var(--accent-red)', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{ width: '6px', height: '6px', backgroundColor: 'var(--accent-red)', borderRadius: '50%', animation: 'pulse 1.5s infinite' }}></div>
+                                        <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: 'white' }}>TOR EXIT NODE</span>
                                     </div>
                                 )}
-
-                                {/* Action Button */}
-                                <a 
-                                    href={`http://13.61.240.101:8000/report/${p.ip}`}
-                                    target="_blank" 
-                                    rel="noreferrer"
-                                    className="w-full text-center py-2.5 px-4 rounded-lg font-sans font-semibold text-sm uppercase tracking-wide transition-all duration-200 bg-gradient-to-r from-cyan-600/40 to-blue-600/40 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 hover:text-cyan-200 hover:from-cyan-600/60 hover:to-blue-600/60 hover:shadow-lg hover:shadow-cyan-500/20"
-                                >
-                                    📄 Generate Forensic Report
-                                </a>
+                                {p.is_datacenter && !p.is_tor && (
+                                    <div style={{ padding: '6px 12px', backgroundColor: 'var(--accent-amber-dim)', border: '1px solid var(--accent-amber)', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{ width: '6px', height: '6px', backgroundColor: 'var(--accent-amber)', borderRadius: '50%' }}></div>
+                                        <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: 'white', textTransform: 'uppercase' }}>DATACENTER</span>
+                                    </div>
+                                )}
+                                <div style={{ padding: '6px 12px', backgroundColor: 'var(--accent-cyan-dim)', border: '1px solid var(--accent-cyan)', borderRadius: '4px' }}>
+                                    <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: 'white', textTransform: 'uppercase' }}>
+                                        {p.access_count || 0} Targets Probed
+                                    </span>
+                                </div>
                             </div>
+
+                            {/* Escalation Probability Bar */}
+                            <div style={{ marginBottom: '24px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Escalation Probability</span>
+                                    <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: getEscalationColor(p.escalation_probability) }}>{p.escalation_probability || 0}%</span>
+                                </div>
+                                <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--border-strong)', borderRadius: '4px', overflow: 'hidden' }}>
+                                    <div style={{
+                                        height: '100%',
+                                        backgroundColor: getEscalationColor(p.escalation_probability),
+                                        width: `${p.escalation_probability || 0}%`,
+                                        transition: 'width 1s ease-out'
+                                    }}></div>
+                                </div>
+                            </div>
+
+                            {/* Metadata Grid */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', backgroundColor: 'var(--bg-surface-raised)', borderRadius: '4px', border: '1px solid var(--border-subtle)', padding: '12px', marginBottom: '20px' }}>
+                                <div style={{ textAlign: 'center', flex: 1 }}>
+                                    <div className="mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>SESSION</div>
+                                    <div className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)' }}>{p.session_duration || 0}s</div>
+                                </div>
+                                <div style={{ width: '1px', backgroundColor: 'var(--border-strong)' }}></div>
+                                <div style={{ textAlign: 'center', flex: 1 }}>
+                                    <div className="mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>RESOURCES</div>
+                                    <div className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-amber)' }}>{p.access_count || 0}</div>
+                                </div>
+                                <div style={{ width: '1px', backgroundColor: 'var(--border-strong)' }}></div>
+                                <div style={{ textAlign: 'center', flex: 1, padding: '0 8px', overflow: 'hidden' }}>
+                                    <div className="mono" style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '4px' }}>ASN ORG</div>
+                                    <div className="mono" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {p.org || 'Unknown'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Attack Pathway */}
+                            {p.resources_probed && p.resources_probed.length > 0 && (
+                                <div style={{ marginBottom: '20px', padding: '12px', backgroundColor: 'var(--bg-surface-raised)', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
+                                    <div className="mono" style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '10px', textTransform: 'uppercase' }}>Attack Pathway Array</div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                                        {p.resources_probed.map((res, i) => (
+                                            <React.Fragment key={i}>
+                                                <div className="mono" style={{ fontSize: '11px', color: 'var(--text-primary)', backgroundColor: 'var(--bg-base)', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border-strong)', maxWidth: '140px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={res}>
+                                                    {res}
+                                                </div>
+                                                {i < p.resources_probed.length - 1 && <span style={{ color: 'var(--accent-cyan)', fontSize: '12px', opacity: 0.6 }}>→</span>}
+                                            </React.Fragment>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Action Button */}
+                            <a 
+                                href={`http://13.61.240.101:8000/report/${p.ip}`}
+                                target="_blank" 
+                                rel="noreferrer"
+                                style={{
+                                    display: 'block', width: '100%', textAlign: 'center', padding: '12px',
+                                    backgroundColor: 'var(--bg-surface-raised)', border: '1px solid var(--accent-cyan)',
+                                    borderRadius: '4px', color: 'var(--accent-cyan)', textDecoration: 'none',
+                                    fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
+                                    transition: 'all 0.2s ease', cursor: 'pointer'
+                                }}
+                                onMouseOver={(e) => { e.target.style.backgroundColor = 'var(--accent-cyan-dim)'; e.target.style.color = '#fff'; }}
+                                onMouseOut={(e) => { e.target.style.backgroundColor = 'var(--bg-surface-raised)'; e.target.style.color = 'var(--accent-cyan)'; }}
+                            >
+                                📄 Generate Forensic Report
+                            </a>
                         </div>
                     );
                 })
