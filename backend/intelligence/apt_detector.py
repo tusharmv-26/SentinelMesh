@@ -34,6 +34,7 @@ class APTDetector:
                 "sessions": [],
                 "honeypots": set(),
                 "resources": set(),
+                "techniques": set(),
                 "total_probes": 0,
                 "first_seen": time.time(),
                 "indicators": []
@@ -41,15 +42,18 @@ class APTDetector:
         
         history = self.ip_history[ip]
         resource_name = event.get("resource_name", "")
+        technique = event.get("simulated_technique", "Unknown")
         timestamp = event.get("timestamp", time.time())
         
         # Record this access
         history["sessions"].append({
             "timestamp": timestamp,
-            "resource": resource_name
+            "resource": resource_name,
+            "technique": technique
         })
         history["honeypots"].add(resource_name)
         history["resources"].add(resource_name)
+        history["techniques"].add(technique)
         history["total_probes"] += 1
         
         apt_score = 0
@@ -72,7 +76,13 @@ class APTDetector:
             apt_score += 25
             indicators.append("MULTI_TARGET_RECONNAISSANCE")
         
-        # APT Indicator 4: Specific Resource Targeting
+        # APT Indicator 4: Rapid Multi-Stage Progression (Demo Booster)
+        # If the attacker tries 3 or more distinct MITRE techniques, it's an advanced attack
+        if len(history["techniques"]) >= 3:
+            apt_score += 65
+            indicators.append("RAPID_MULTI_STAGE_PROGRESSION")
+            
+        # APT Indicator 5: Specific Resource Targeting
         if self._detect_specific_targeting(history):
             apt_score += 20
             indicators.append("SPECIFIC_RESOURCE_TARGETING")

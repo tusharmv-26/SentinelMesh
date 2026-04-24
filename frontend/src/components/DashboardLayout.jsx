@@ -6,9 +6,8 @@ import PanelAuditLog from './PanelAuditLog';
 import PanelAttackerIntelligence from './PanelAttackerIntelligence';
 import PanelCorrelations from './PanelCorrelations';
 import PanelHoneypots from './PanelHoneypots';
-import APTSuspects from './APTSuspects';
-import DevSecOpsCoverage from './DevSecOpsCoverage';
 import MITREMatrixSimulator from './MITREMatrixSimulator';
+import APTSuspects from './APTSuspects';
 
 const DashboardLayout = ({ events, auditLog, systemStatus }) => {
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -28,7 +27,7 @@ const DashboardLayout = ({ events, auditLog, systemStatus }) => {
         </div>
 
         <nav style={{ flex: 1 }}>
-          {['Dashboard', 'Attacker Intelligence', 'Live Events', 'Audit Log', 'Insider Threats', 'Honeypots', 'MITRE Simulator', 'APT Activity', 'DevSecOps', 'System Parameters'].map((nav) => {
+          {['Dashboard', 'Attacker Intelligence', 'Live Events', 'Audit Log', 'Insider Threats', 'Honeypots', 'MITRE Simulator', 'APT Activity', 'System Parameters'].map((nav) => {
             const isActive = activeTab === nav;
             return (
             <div key={nav} 
@@ -136,11 +135,7 @@ const DashboardLayout = ({ events, auditLog, systemStatus }) => {
           </div>
         )}
 
-        {activeTab === 'DevSecOps' && (
-          <div style={{ flex: 1, padding: '16px', overflow: 'hidden' }}>
-            <DevSecOpsCoverage serverUrl="http://localhost:8000" />
-          </div>
-        )}
+
 
         {activeTab === 'System Parameters' && (
           <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>

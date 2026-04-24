@@ -44,6 +44,27 @@ const PanelHoneypots = ({ serverUrl }) => {
     }
   };
 
+  const getTrinityBadges = (hp) => {
+    if (hp.type !== 'DYNAMIC_TRAP') return null;
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '12px' }}>
+        <div style={{ fontSize: '9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ padding: '2px 4px', background: 'rgba(252, 211, 77, 0.1)', color: '#FCD34D', border: '1px solid rgba(252, 211, 77, 0.3)', borderRadius: '3px' }}>TRACKING TOKEN</span>
+          <span style={{ color: '#9CA3AF' }}>{hp.canary_token}</span>
+        </div>
+        <div style={{ fontSize: '9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ padding: '2px 4px', background: 'rgba(96, 165, 250, 0.1)', color: '#60A5FA', border: '1px solid rgba(96, 165, 250, 0.3)', borderRadius: '3px' }}>INTENT LOGGER</span>
+          <span style={{ color: '#9CA3AF' }}>{hp.intent_analysis}</span>
+        </div>
+        <div style={{ fontSize: '9px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ padding: '2px 4px', background: 'rgba(239, 68, 68, 0.1)', color: '#EF4444', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '3px' }}>VULN EXPOSED</span>
+          <span style={{ color: '#9CA3AF' }}>{hp.vuln_profile}</span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="panel">
       <div className="panel-header">
@@ -55,20 +76,21 @@ const PanelHoneypots = ({ serverUrl }) => {
         ) : loading ? (
           <div style={{ textAlign: 'center', color: '#9CA3AF', paddingTop: '20px' }}>Loading...</div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {(Array.isArray(honeypots) ? honeypots : []).map((hp) => (
               <div
                 key={hp.name}
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
                   border: `1px solid rgba(255, 255, 255, 0.1)`,
+                  borderLeft: `4px solid ${getModeColor(hp.mode)}`,
                   borderRadius: '8px',
-                  padding: '12px',
+                  padding: '20px',
                   backdropFilter: 'blur(10px)'
                 }}
               >
                 <div style={{ fontSize: '12px', color: '#9CA3AF', marginBottom: '8px' }}>
-                  {hp.name}
+                  <span>{hp.name}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <div
@@ -84,9 +106,11 @@ const PanelHoneypots = ({ serverUrl }) => {
                     {hp.mode}
                   </span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '8px' }}>
-                  Hits: {hp.total_hits}
+                <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '12px' }}>
+                  Total Attacker Engagements: {hp.total_hits}
                 </div>
+                
+                {getTrinityBadges(hp)}
               </div>
             ))}
           </div>

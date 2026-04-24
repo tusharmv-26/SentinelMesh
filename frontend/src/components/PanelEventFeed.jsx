@@ -125,6 +125,20 @@ const PanelEventFeed = ({ events }) => {
                     </td>
                   </tr>
                 )}
+                {ev.trinity_intel && (
+                  <tr style={{ backgroundColor: '#020617', borderBottom: (ev.mutation ? 'none' : '1px solid var(--border-subtle)'), borderLeft: '3px solid #10B981' }}>
+                    <td colSpan="4" style={{ padding: '8px 16px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ fontSize: '10px', color: '#10B981', fontWeight: 'bold' }}>UNIFIED HONEYPOT INTEL CAPTURE:</span>
+                        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '10px', color: '#9CA3AF' }}><span style={{color: '#FCD34D'}}>Token:</span> {ev.trinity_intel.canary_token_extracted}</span>
+                            <span style={{ fontSize: '10px', color: '#9CA3AF' }}><span style={{color: '#60A5FA'}}>Intent:</span> {ev.trinity_intel.intent_detected}</span>
+                            <span style={{ fontSize: '10px', color: '#9CA3AF' }}><span style={{color: '#EF4444'}}>Exploit:</span> {ev.trinity_intel.vuln_exploit_attempt}</span>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {ev.mutation && (
                     <tr style={{ backgroundColor: '#020617', borderBottom: '1px solid var(--border-subtle)', borderLeft: '3px solid #8b5cf6' }}>
                         <td colSpan="4" style={{ padding: '8px 16px 16px 16px' }}>

@@ -11,66 +11,25 @@ class HoneypotManager:
     """Manages honeypot registry, hit tracking, and mode transitions"""
     
     def __init__(self):
+        import hashlib
+        canary_hash = hashlib.md5(f"apex-trap-{time.time()}".encode()).hexdigest()[:8]
+        
         self.honeypots = {
-            "s3-customer-backups": {
-                "id": "s3-customer-backups",
-                "name": "Customer Database Backups",
-                "type": "S3_BUCKET",
-                "resource_name": "company-prod-db-backup-2024",
-                "description": "S3 bucket with fake customer database backups",
+            "sentinelmesh-apex-trap": {
+                "id": "sentinelmesh-apex-trap",
+                "name": "SentinelMesh Apex Trap",
+                "type": "DYNAMIC_TRAP",
+                "resource_name": "unified-core-trap-endpoint",
+                "description": "Unified Super-Honeypot handling all threat vectors simultaneously.",
                 "created_at": time.time(),
                 "total_hits": 0,
                 "last_accessed": None,
-                "mode": "PASSIVE",
-                "threat_level": "LOW"
-            },
-            "ec2-metadata": {
-                "id": "ec2-metadata",
-                "name": "EC2 Metadata Endpoint",
-                "type": "EC2_METADATA",
-                "resource_name": "ec2-metadata-ssrf-honeypot",
-                "description": "Fake AWS EC2 instance metadata service endpoint",
-                "created_at": time.time(),
-                "total_hits": 0,
-                "last_accessed": None,
-                "mode": "PASSIVE",
-                "threat_level": "LOW"
-            },
-            "rds-credentials": {
-                "id": "rds-credentials",
-                "name": "RDS Connection String",
-                "type": "S3_BUCKET",
-                "resource_name": "internal-db-connection-strings-2026",
-                "description": "S3 bucket with fake RDS database connection strings",
-                "created_at": time.time(),
-                "total_hits": 0,
-                "last_accessed": None,
-                "mode": "PASSIVE",
-                "threat_level": "LOW"
-            },
-            "api-keys-endpoint": {
-                "id": "api-keys-endpoint",
-                "name": "API Keys Endpoint",
-                "type": "API_ENDPOINT",
-                "resource_name": "api-keys-honeypot",
-                "description": "Fake internal API endpoint with exposed API keys",
-                "created_at": time.time(),
-                "total_hits": 0,
-                "last_accessed": None,
-                "mode": "PASSIVE",
-                "threat_level": "LOW"
-            },
-            "env-config-file": {
-                "id": "env-config-file",
-                "name": ".env Configuration File",
-                "type": "S3_BUCKET",
-                "resource_name": "dev-environment-configs-backup-2026",
-                "description": "S3 bucket with fake .env file containing secrets",
-                "created_at": time.time(),
-                "total_hits": 0,
-                "last_accessed": None,
-                "mode": "PASSIVE",
-                "threat_level": "LOW"
+                "mode": "ACTIVE",
+                "threat_level": "HIGH",
+                "integration_type": "native",
+                "canary_token": f"canary_{canary_hash}",
+                "intent_analysis": "Full Payload & Keystroke Logging",
+                "vuln_profile": "Adaptive Exploit Baiting"
             }
         }
         
@@ -147,39 +106,37 @@ class HoneypotManager:
             "honeypots": self.get_all_honeypots()
         }
 
-    def create_dynamic_honeypot(self, technique_id: str, technique_name: str, tactic: str) -> Dict:
+    def trigger_apex_honeypot(self, technique_id: str, technique_name: str, tactic: str) -> Dict:
         """
-        Dynamically generates a honeypot tailored to a specific MITRE technique.
-        This fulfills the requirement of 'trapping the attacker on any path'.
+        Routes the attacker to the unified Apex Trap and generates contextual
+        threat intelligence based on the specific MITRE technique used.
         """
-        honeypot_id = f"dynamic-{technique_id.lower()}-{int(time.time())}"
-        
-        # Generate a convincing resource name based on the technique
-        resource_keywords = {
-            "T1566": "employee-phishing-inbox",
-            "T1078": "admin-sso-portal",
-            "T1110": "ssh-gateway-logs",
-            "T1552": "vault-secrets-backup",
-            "T1530": "s3-customer-data-lake",
-            "T1059": "powershell-execution-policy",
-            "T1098": "iam-role-manager"
+        apex_id = "sentinelmesh-apex-trap"
+        if apex_id in self.honeypots:
+            self.honeypots[apex_id]["total_hits"] += 1
+            self.honeypots[apex_id]["last_accessed"] = time.time()
+            base_trap = self.honeypots[apex_id]
+        else:
+            base_trap = {}
+
+        # Determine contextual vulnerability based on tactic
+        vuln_map = {
+            "Initial Access": "CVE-2024-3094 (XZ Utils)",
+            "Execution": "CVE-2021-44228 (Log4Shell)",
+            "Persistence": "SMBv1 Auth Bypass",
+            "Privilege Escalation": "CVE-2021-3156 (Sudo)",
+            "Defense Evasion": "EDR EDR-Bypass Script",
+            "Credential Access": "Cleartext SAM Backup",
+            "Discovery": "Exposed AD LDAP",
+            "Lateral Movement": "Open RDP (No NLA)",
+            "Collection": "Unauthenticated S3",
+            "Exfiltration": "Unrestricted Outbound DNS"
         }
         
-        # Default fallback name
-        resource_name = resource_keywords.get(technique_id, f"internal-service-{technique_id.lower()}")
-        
-        new_honeypot = {
-            "id": honeypot_id,
-            "name": f"Trap for {technique_id}: {technique_name}",
-            "type": "DYNAMIC_TRAP",
-            "resource_name": resource_name,
-            "description": f"Dynamically synthesized honeypot to trap {tactic} attempts.",
-            "created_at": time.time(),
-            "total_hits": 0,
-            "last_accessed": None,
-            "mode": "ACTIVE",
-            "threat_level": "HIGH"
+        # Return the intel package to the caller
+        return {
+            "resource_name": base_trap.get("resource_name", "unified-core-trap-endpoint"),
+            "canary_token": base_trap.get("canary_token", "canary_default"),
+            "intent_detected": f"Attempting {technique_name} via {tactic}",
+            "vuln_profile": vuln_map.get(tactic, "Generic Misconfiguration")
         }
-        
-        self.honeypots[honeypot_id] = new_honeypot
-        return new_honeypot

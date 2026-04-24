@@ -9,7 +9,7 @@ import threading
 
 from intelligence import (
     SimilarityEngine, AttackerProfiler, enrich_ip, MutationEngine,
-    MITREMapper, APTDetector, DevSecOpsManager, HoneypotManager,
+    MITREMapper, APTDetector, HoneypotManager,
     EmployeeActivityTracker, InsiderExternalCorrelationEngine
 )
 import sys
@@ -41,7 +41,6 @@ attacker_profiler = AttackerProfiler()
 mutation_engine = MutationEngine()
 mitre_mapper = MITREMapper()
 apt_detector = APTDetector()
-devsecops_manager = DevSecOpsManager()
 honeypot_manager = HoneypotManager()
 employee_tracker = EmployeeActivityTracker()
 correlation_engine = InsiderExternalCorrelationEngine()
@@ -106,14 +105,15 @@ def handle_events():
         "intent": profile.get("intent", "UNKNOWN"),
         "escalation_probability": profile.get("escalation_probability", 0),
         "threat_level": profile.get("threat_level", "LOW"),
-        "ip_enrichment": enrichment
+        "ip_enrichment": enrichment,
+        "trinity_intel": payload.get("trinity_intel", None)
     }
     
     events.insert(0, event_record)
 
     # Feed to intelligence modules
     mitre_mapper.map_to_mitre(event_record, profile)
-    apt_detector.analyze_profile(profile, mitre_mapper.detected_techniques)
+    apt_detector.update(req_ip, event_record, profile)
     correlation_engine.correlate_threats(employee_tracker.get_all_activities(), events)
 
     # 2. If score >= 70, trigger intelligence matching and self-healing
@@ -174,14 +174,6 @@ def get_mitre_summary():
 @app.route("/apt/suspects", methods=["GET"])
 def get_apt_suspects_endpoint():
     return jsonify(apt_detector.get_apt_suspects())
-
-@app.route("/devsecops/coverage", methods=["GET"])
-def get_devsecops_coverage():
-    return jsonify(devsecops_manager.get_coverage_report())
-
-@app.route("/devsecops/coverage-summary", methods=["GET"])
-def get_devsecops_summary():
-    return jsonify(devsecops_manager.get_coverage_summary())
 
 @app.route("/honeypots", methods=["GET"])
 def get_honeypots():
@@ -316,8 +308,8 @@ def simulate_mitre_path():
     if not technique_id:
         return jsonify({"status": "error", "message": "Missing technique_id"}), 400
         
-    # 1. Create a dynamic honeypot designed for this technique
-    new_honeypot = honeypot_manager.create_dynamic_honeypot(technique_id, technique_name, tactic)
+    # 1. Trigger the unified apex honeypot
+    intel_package = honeypot_manager.trigger_apex_honeypot(technique_id, technique_name, tactic)
     
     # 2. Simulate an attacker hitting it
     ts = time.time()
@@ -327,10 +319,15 @@ def simulate_mitre_path():
     # 3. Create a synthetic event
     event = {
         "attacker_ip": ip,
-        "resource_name": new_honeypot["resource_name"],
+        "resource_name": intel_package["resource_name"],
         "method": "POST",
         "timestamp": ts,
-        "simulated_technique": technique_id
+        "simulated_technique": technique_id,
+        "trinity_intel": {
+            "canary_token_extracted": intel_package["canary_token"],
+            "intent_detected": intel_package["intent_detected"],
+            "vuln_exploit_attempt": intel_package["vuln_profile"]
+        }
     }
     
     # 4. Fire the event via an internal request or directly
@@ -348,9 +345,48 @@ def simulate_mitre_path():
         
     return jsonify({
         "status": "success", 
-        "message": f"Synthesized honeypot for {technique_id} and trapped simulated attacker.",
-        "honeypot": new_honeypot
+        "message": f"Routed {technique_id} attempt to unified Apex trap.",
+        "intel": intel_package
     })
+
+@app.route("/webhooks/external-honeypot", methods=["POST"])
+def external_honeypot_webhook():
+    """Receives payloads from Cowrie, Thinkst Canary, and Dionaea"""
+    payload = request.get_json() or {}
+    
+    attacker_ip = payload.get("src_ip", f"192.168.100.{random.randint(10,250)}")
+    honeypot_id = payload.get("honeypot_id")
+    
+    if not honeypot_id:
+        return jsonify({"status": "error", "message": "Missing honeypot_id"}), 400
+        
+    hp = honeypot_manager.get_honeypot(honeypot_id)
+    if not hp:
+        return jsonify({"status": "error", "message": "Unknown honeypot"}), 404
+        
+    # Create internal event
+    event = {
+        "attacker_ip": attacker_ip,
+        "resource_name": hp["resource_name"],
+        "method": "POST",
+        "timestamp": time.time(),
+        "simulated_technique": payload.get("technique", "T1078")
+    }
+    
+    # Fire event internally to trigger ML risk engine
+    def fire_event():
+        try:
+            urllib.request.urlopen(urllib.request.Request(
+                "http://127.0.0.1:8000/events", 
+                json.dumps(event).encode('utf-8'), 
+                {'Content-Type': 'application/json'}
+            ))
+        except Exception as e:
+            print(f"Error firing external webhook event: {e}")
+            
+    threading.Thread(target=fire_event).start()
+    
+    return jsonify({"status": "success", "message": f"Webhook processed for {hp['integration_type']} honeypot"})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)
