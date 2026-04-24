@@ -5,6 +5,10 @@ import PanelWorldMap from './PanelWorldMap';
 import PanelAuditLog from './PanelAuditLog';
 import PanelAttackerIntelligence from './PanelAttackerIntelligence';
 import PanelCorrelations from './PanelCorrelations';
+import PanelHoneypots from './PanelHoneypots';
+import MITREHeatmap from './MITREHeatmap';
+import APTSuspects from './APTSuspects';
+import DevSecOpsCoverage from './DevSecOpsCoverage';
 
 const DashboardLayout = ({ events, auditLog, systemStatus }) => {
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -24,7 +28,7 @@ const DashboardLayout = ({ events, auditLog, systemStatus }) => {
         </div>
 
         <nav style={{ flex: 1 }}>
-          {['Dashboard', 'Attacker Intelligence', 'Live Events', 'Audit Log', 'Insider Threats', 'System Parameters'].map((nav) => {
+          {['Dashboard', 'Attacker Intelligence', 'Live Events', 'Audit Log', 'Insider Threats', 'Honeypots', 'MITRE Heatmap', 'APT Activity', 'DevSecOps', 'System Parameters'].map((nav) => {
             const isActive = activeTab === nav;
             return (
             <div key={nav} 
@@ -104,6 +108,33 @@ const DashboardLayout = ({ events, auditLog, systemStatus }) => {
         {activeTab === 'Insider Threats' && (
           <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
             <PanelCorrelations />
+          </div>
+        )}
+
+        {activeTab === 'Honeypots' && (
+          <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', height: '100%', minHeight: 0 }}>
+              <PanelHoneypots serverUrl="http://13.61.240.101:8000" />
+              <MITREHeatmap serverUrl="http://13.61.240.101:8000" />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'MITRE Heatmap' && (
+          <div style={{ flex: 1, padding: '16px', overflow: 'hidden' }}>
+            <MITREHeatmap serverUrl="http://13.61.240.101:8000" />
+          </div>
+        )}
+
+        {activeTab === 'APT Activity' && (
+          <div style={{ flex: 1, padding: '16px', overflow: 'hidden' }}>
+            <APTSuspects serverUrl="http://13.61.240.101:8000" />
+          </div>
+        )}
+
+        {activeTab === 'DevSecOps' && (
+          <div style={{ flex: 1, padding: '16px', overflow: 'hidden' }}>
+            <DevSecOpsCoverage serverUrl="http://13.61.240.101:8000" />
           </div>
         )}
 

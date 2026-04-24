@@ -12,10 +12,18 @@ from intelligence.ip_enricher import enrich_ip
 from intelligence.mutation_engine import MutationEngine
 from intelligence.employee_tracker import EmployeeActivityTracker
 from intelligence.correlation_engine import InsiderExternalCorrelationEngine
+from intelligence.honeypot_manager import HoneypotManager
+from intelligence.mitre_mapper import MITREMapper
+from intelligence.apt_detector import APTDetector
+from intelligence.dynamic_content import DynamicContentGenerator
+from intelligence.devsecops_manager import DevSecOpsManager
+from ml.ml_risk_engine import MLRiskEngine
+from ml.mitre_ml_engine import MITREMLEngine
 from aws_client import AWSController
 from grok_client import GrokClient
 from reports.report_generator import generate_incident_report
 import os
+import json
 
 app = FastAPI(title="Cloud Sentinel API")
 
@@ -37,6 +45,13 @@ attacker_profiler = AttackerProfiler()
 mutation_engine = MutationEngine()
 employee_tracker = EmployeeActivityTracker()
 correlation_engine = InsiderExternalCorrelationEngine()
+honeypot_manager = HoneypotManager()
+mitre_mapper = MITREMapper()
+apt_detector = APTDetector()
+dynamic_content = DynamicContentGenerator()
+devsecops_manager = DevSecOpsManager()
+ml_risk_engine = MLRiskEngine()
+mitre_ml_engine = MITREMLEngine()
 
 # In-memory stores
 events = [] # Event feed
@@ -76,11 +91,33 @@ async def post_event(request: Request):
     # 1. Enrich IP with Global Intel
     enrichment = enrich_ip(req_ip)
     
-    # 2. Calculate risk score
-    score = risk_engine.calculate_score(req_ip, req_res_name)
-    
-    # 1b. Update Attacker Profile
+    # 2. Calculate risk score using ML model (replaces heuristic RiskEngine)
     profile = attacker_profiler.update(req_ip, req_res_name, ts, enrichment)
+    score = ml_risk_engine.predict({"timestamp": ts, "resource_name": req_res_name}, profile, enrichment)
+    
+    # 3. Record honeypot hit (tracks which honeypots are being targeted)
+    honeypot_manager.record_hit(req_res_name, req_ip)
+    
+    # 4. Map to MITRE ATT&CK techniques (both rule-based and ML)
+    mitre_techniques_rules = mitre_mapper.map_to_mitre(
+        {"timestamp": ts, "resource_name": req_res_name, "ip_enrichment": enrichment},
+        profile
+    )
+    mitre_techniques_ml = mitre_ml_engine.predict_techniques(
+        {"timestamp": ts, "resource_name": req_res_name, "ip_enrichment": enrichment},
+        profile,
+        enrichment
+    )
+    # Combine techniques and deduplicate
+    all_techniques = {}
+    for tech in mitre_techniques_rules + mitre_techniques_ml:
+        tech_id = tech["technique_id"]
+        if tech_id not in all_techniques:
+            all_techniques[tech_id] = tech
+    mitre_techniques = list(all_techniques.values())
+    
+    # 5. Detect APT patterns
+    apt_analysis = apt_detector.update(req_ip, {"timestamp": ts, "resource_name": req_res_name}, profile)
     
     # Update system tracking
     system_status["total_events"] += 1
@@ -98,7 +135,7 @@ async def post_event(request: Request):
         system_status["status"] = "Monitoring"
         status_badge = "Low"
 
-    # Add to main event feed
+    # Add to main event feed with all new intelligence
     event_record = {
         "id": len(events) + 1,
         "timestamp": datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S'),
@@ -111,11 +148,13 @@ async def post_event(request: Request):
         "intent": profile["intent"],
         "escalation_probability": profile["escalation_probability"],
         "threat_level": profile["threat_level"],
-        "ip_enrichment": enrichment
+        "ip_enrichment": enrichment,
+        "mitre_techniques": mitre_techniques,
+        "apt_analysis": apt_analysis
     }
     events.insert(0, event_record)  # Reverse-chronological
 
-    # 2. If score >= 70, trigger intelligence matching and self-healing
+    # 6. If score >= 70, trigger intelligence matching and self-healing
     if score >= 70:
         at_risk = similarity_engine.find_at_risk_resource(req_res_name)
         if at_risk:
@@ -150,10 +189,14 @@ async def post_event(request: Request):
                     }
                     audit_log.insert(0, audit_record)
                     
-                    # 3. Post-Heal Action: Adaptive Mutation
+                    # 7. Post-Heal Action: Adaptive Mutation
                     mutation_record = mutation_engine.mutate(profile)
                     if mutation_record:
                         events[0]["mutation"] = mutation_record
+    
+    # 8. If APT detected and score crosses 50, activate deception mode
+    if apt_analysis["apt_score"] >= 50:
+        honeypot_manager.set_mode(req_res_name, "DECEPTION_MODE")
 
     return {"status": "success", "record": event_record}
 
@@ -467,3 +510,227 @@ def get_all_employees():
             "Expires": "0"
         }
     )
+
+# ============================================================================
+# NEW FEATURE ENDPOINTS: Honeypots, MITRE, APT, ML, DevSecOps
+# ============================================================================
+
+# Feature 1: Multiple Honeypots
+@app.get("/honeypots")
+def get_honeypots():
+    """Get all honeypots and their status"""
+    return JSONResponse(
+        content=honeypot_manager.get_all_honeypots(),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.post("/honeypots/mode")
+async def set_honeypot_mode(request: Request):
+    """Change honeypot mode: PASSIVE, ACTIVE, DECEPTION_MODE"""
+    payload = await request.json()
+    honeypot_name = payload.get("honeypot_name")
+    mode = payload.get("mode", "PASSIVE")
+    
+    honeypot_manager.set_mode(honeypot_name, mode)
+    
+    return {
+        "status": "success",
+        "honeypot": honeypot_name,
+        "mode": mode
+    }
+
+# Feature 2: MITRE ATT&CK Mapping
+@app.get("/mitre/summary")
+def get_mitre_summary():
+    """Get summary of detected MITRE techniques"""
+    techniques = {}
+    
+    for event in events:
+        for tech in event.get("mitre_techniques", []):
+            tech_id = tech["technique_id"]
+            if tech_id not in techniques:
+                techniques[tech_id] = {
+                    "technique_id": tech_id,
+                    "name": tech.get("name", "Unknown"),
+                    "tactic": tech.get("tactic", "Unknown"),
+                    "count": 0,
+                    "highest_confidence": 0.0
+                }
+            techniques[tech_id]["count"] += 1
+            techniques[tech_id]["highest_confidence"] = max(
+                techniques[tech_id]["highest_confidence"],
+                tech.get("confidence", 0.0)
+            )
+    
+    sorted_techniques = sorted(
+        techniques.values(),
+        key=lambda x: (x["count"], x["highest_confidence"]),
+        reverse=True
+    )
+    
+    return JSONResponse(
+        content=sorted_techniques,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+# Feature 3: APT Detection Engine
+@app.get("/apt/suspects")
+def get_apt_suspects():
+    """Get list of IPs classified as APT with analysis"""
+    apt_ips = {}
+    
+    for event in events:
+        ip = event.get("attacker_ip")
+        apt_data = event.get("apt_analysis", {})
+        
+        if apt_data.get("classification") in ["SUSPECTED_APT", "CONFIRMED_APT_PATTERN"]:
+            if ip not in apt_ips:
+                apt_ips[ip] = {
+                    "ip": ip,
+                    "classification": apt_data.get("classification"),
+                    "apt_score": apt_data.get("apt_score", 0),
+                    "indicators": apt_data.get("indicators", []),
+                    "first_seen": event.get("timestamp"),
+                    "event_count": 0
+                }
+            apt_ips[ip]["event_count"] += 1
+    
+    sorted_apts = sorted(
+        apt_ips.values(),
+        key=lambda x: x["apt_score"],
+        reverse=True
+    )
+    
+    return JSONResponse(
+        content=sorted_apts,
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+# Feature 4: ML Risk Model (Feature Importance)
+@app.get("/ml/feature-importance")
+def get_ml_feature_importance():
+    """Get ML model feature importance for risk scoring and MITRE classification"""
+    return JSONResponse(
+        content={
+            "risk_model": ml_risk_engine.get_feature_importance(),
+            "mitre_model": mitre_ml_engine.get_feature_importance()
+        },
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+# Feature 5: Dynamic Honeypots (Content Generation)
+@app.get("/honeypots/{honeypot_name}/content")
+def get_dynamic_content(honeypot_name: str):
+    """Get dynamically generated content for a honeypot based on attacker profile"""
+    # Find the attacker who most recently accessed this honeypot
+    recent_attacker_ip = None
+    for event in events:
+        if honeypot_name in event.get("resource_name", ""):
+            recent_attacker_ip = event.get("attacker_ip")
+            break
+    
+    if not recent_attacker_ip:
+        return {"content": "No recent attacker found"}
+    
+    profile = attacker_profiler.get_profile(recent_attacker_ip)
+    access_tier = honeypot_manager.get_access_tier(recent_attacker_ip, honeypot_name)
+    
+    # Generate appropriate response based on honeypot type
+    if "ec2" in honeypot_name:
+        content = dynamic_content.generate_ec2_metadata_response(profile, access_tier)
+    elif "rds" in honeypot_name or "database" in honeypot_name:
+        content = dynamic_content.generate_rds_connection_string(profile, access_tier)
+    elif "api" in honeypot_name or "key" in honeypot_name:
+        content = dynamic_content.generate_api_key_response(profile, access_tier)
+    elif "env" in honeypot_name or "config" in honeypot_name:
+        content = dynamic_content.generate_env_file_content(profile, access_tier)
+    else:
+        content = "Generic honeypot content"
+    
+    return JSONResponse(
+        content={"content": content, "attacker_ip": recent_attacker_ip, "access_tier": access_tier},
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+# Feature 6: DevSecOps Bridge
+@app.post("/devsecops/deployment-event")
+async def record_deployment(request: Request):
+    """Record a deployment event from CI/CD system"""
+    payload = await request.json()
+    
+    coverage = devsecops_manager.record_deployment(payload)
+    
+    return {
+        "status": "success",
+        "coverage_analysis": coverage
+    }
+
+@app.get("/devsecops/coverage")
+def get_devsecops_coverage():
+    """Get deployment coverage report"""
+    return JSONResponse(
+        content=devsecops_manager.get_coverage_report(),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.get("/devsecops/coverage-summary")
+def get_coverage_summary():
+    """Get deployment coverage summary"""
+    return JSONResponse(
+        content=devsecops_manager.get_coverage_summary(),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.get("/devsecops/alerts")
+def get_devsecops_alerts():
+    """Get recent DevSecOps alerts"""
+    return JSONResponse(
+        content=devsecops_manager.get_recent_alerts(),
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
+
+@app.post("/devsecops/honeypot-create")
+async def create_honeypot_for_service(request: Request):
+    """Create a honeypot for an uncovered service asset"""
+    payload = await request.json()
+    service_name = payload.get("service_name")
+    asset_name = payload.get("asset_name")
+    
+    new_honeypot = devsecops_manager.create_honeypot_for_service(service_name, asset_name)
+    
+    return {
+        "status": "success",
+        "honeypot": new_honeypot
+    }

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 const PanelAttackerIntelligence = () => {
     const [profiles, setProfiles] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [aptData, setAptData] = useState({});
 
     const fetchProfiles = async () => {
         try {
@@ -16,9 +17,27 @@ const PanelAttackerIntelligence = () => {
         }
     };
 
+    const fetchAptData = async () => {
+        try {
+            const res = await fetch('http://13.61.240.101:8000/apt/suspects');
+            const data = await res.json();
+            const aptMap = {};
+            data.forEach(apt => {
+                aptMap[apt.ip] = apt;
+            });
+            setAptData(aptMap);
+        } catch (err) {
+            console.error("Error fetching APT data:", err);
+        }
+    };
+
     useEffect(() => {
         fetchProfiles();
-        const interval = setInterval(fetchProfiles, 3000);
+        fetchAptData();
+        const interval = setInterval(() => {
+            fetchProfiles();
+            fetchAptData();
+        }, 3000);
         return () => clearInterval(interval);
     }, []);
 
@@ -141,6 +160,28 @@ const PanelAttackerIntelligence = () => {
 
                             {/* Status Badges */}
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+                                {aptData[p.ip] && (
+                                    <div style={{ 
+                                        padding: '6px 12px', 
+                                        backgroundColor: aptData[p.ip].classification === 'CONFIRMED_APT_PATTERN' ? 'rgba(220, 38, 38, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                        border: `1px solid ${aptData[p.ip].classification === 'CONFIRMED_APT_PATTERN' ? '#DC2626' : '#EF4444'}`,
+                                        borderRadius: '4px', 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '6px'
+                                    }}>
+                                        <div style={{ 
+                                            width: '6px', 
+                                            height: '6px', 
+                                            backgroundColor: aptData[p.ip].classification === 'CONFIRMED_APT_PATTERN' ? '#DC2626' : '#EF4444',
+                                            borderRadius: '50%', 
+                                            animation: aptData[p.ip].classification === 'CONFIRMED_APT_PATTERN' ? 'pulse 1s infinite' : 'none'
+                                        }}></div>
+                                        <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: 'white' }}>
+                                            {aptData[p.ip].classification === 'CONFIRMED_APT_PATTERN' ? 'CONFIRMED APT' : 'SUSPECTED APT'}
+                                        </span>
+                                    </div>
+                                )}
                                 {p.is_tor && (
                                     <div style={{ padding: '6px 12px', backgroundColor: 'var(--accent-red-dim)', border: '1px solid var(--accent-red)', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <div style={{ width: '6px', height: '6px', backgroundColor: 'var(--accent-red)', borderRadius: '50%', animation: 'pulse 1.5s infinite' }}></div>

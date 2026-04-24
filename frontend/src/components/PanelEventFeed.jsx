@@ -72,7 +72,7 @@ const PanelEventFeed = ({ events }) => {
               return (
                 <React.Fragment key={ev.id}>
                 <tr style={{ 
-                  borderBottom: ev.mutation ? 'none' : '1px solid var(--border-subtle)',
+                  borderBottom: (ev.mutation || ev.mitre_techniques?.length > 0) ? 'none' : '1px solid var(--border-subtle)',
                   animation: isHighlight ? (ev.risk_score >= 70 ? 'flashRowRed 1.8s' : 'flashRow 1.5s') : 'none',
                   borderLeft: `3px solid ${riskColor}`,
                   backgroundColor: 'transparent',
@@ -93,6 +93,38 @@ const PanelEventFeed = ({ events }) => {
                     </div>
                   </td>
                 </tr>
+                {ev.mitre_techniques && ev.mitre_techniques.length > 0 && (
+                  <tr style={{ backgroundColor: '#020617', borderBottom: ev.mutation ? 'none' : '1px solid var(--border-subtle)', borderLeft: '3px solid #F59E0B' }}>
+                    <td colSpan="4" style={{ padding: '8px 16px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 'bold', marginRight: '4px' }}>MITRE:</span>
+                        {ev.mitre_techniques.slice(0, 4).map((tech, idx) => (
+                          <span
+                            key={idx}
+                            style={{
+                              fontSize: '10px',
+                              fontFamily: 'JetBrains Mono, monospace',
+                              color: '#F59E0B',
+                              backgroundColor: '#F59E0B15',
+                              padding: '2px 6px',
+                              borderRadius: '3px',
+                              border: '1px solid #F59E0B30',
+                              title: tech.name
+                            }}
+                            title={`${tech.technique_id}: ${tech.name}`}
+                          >
+                            {tech.technique_id}
+                          </span>
+                        ))}
+                        {ev.mitre_techniques.length > 4 && (
+                          <span style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>
+                            +{ev.mitre_techniques.length - 4} more
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 {ev.mutation && (
                     <tr style={{ backgroundColor: '#020617', borderBottom: '1px solid var(--border-subtle)', borderLeft: '3px solid #8b5cf6' }}>
                         <td colSpan="4" style={{ padding: '8px 16px 16px 16px' }}>
