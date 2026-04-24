@@ -145,3 +145,13 @@ class EmployeeActivityTracker:
             "threat_level": threat_level,
             "latest_access": logs[-1] if logs else None
         }
+
+    def get_all_activities(self) -> List[Dict]:
+        all_activities = []
+        for logs in self.employee_logs.values():
+            all_activities.extend(logs)
+        return all_activities
+
+    def get_all_employees(self) -> List[Dict]:
+        profiles = [self.get_employee_profile(emp_id) for emp_id in self.employee_logs.keys()]
+        return sorted(profiles, key=lambda x: x['avg_risk_score'], reverse=True)

@@ -6,7 +6,11 @@ import random
 import urllib.request
 import json
 
-from intelligence import RiskEngine, SimilarityEngine
+from intelligence import (
+    RiskEngine, SimilarityEngine, AttackerProfiler, enrich_ip, MutationEngine,
+    MITREMapper, APTDetector, DevSecOpsManager, HoneypotManager,
+    EmployeeActivityTracker, InsiderExternalCorrelationEngine
+)
 from aws_client import AWSController
 from grok_client import GrokClient
 
@@ -16,6 +20,15 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 # Initialize engines
 risk_engine = RiskEngine()
 similarity_engine = SimilarityEngine()
+attacker_profiler = AttackerProfiler()
+mutation_engine = MutationEngine()
+mitre_mapper = MITREMapper()
+apt_detector = APTDetector()
+devsecops_manager = DevSecOpsManager()
+honeypot_manager = HoneypotManager()
+employee_tracker = EmployeeActivityTracker()
+correlation_engine = InsiderExternalCorrelationEngine()
+
 aws_client = AWSController()
 grok_client = GrokClient()
 
@@ -58,6 +71,10 @@ def handle_events():
         system_status["status"] = "Monitoring"
         status_badge = "Low"
 
+    # Profile attacker
+    enrichment = enrich_ip(req_ip)
+    profile = attacker_profiler.update(req_ip, req_res_name, ts, enrichment)
+
     # Add to main event feed
     event_record = {
         "id": len(events) + 1,
@@ -66,9 +83,20 @@ def handle_events():
         "resource_name": req_res_name,
         "method": req_method,
         "risk_score": score,
-        "status_badge": status_badge
+        "status_badge": status_badge,
+        "attack_type": profile.get("behavior_type", "UNKNOWN"),
+        "intent": profile.get("intent", "UNKNOWN"),
+        "escalation_probability": profile.get("escalation_probability", 0),
+        "threat_level": profile.get("threat_level", "LOW"),
+        "ip_enrichment": enrichment
     }
+    
     events.insert(0, event_record)
+
+    # Feed to intelligence modules
+    mitre_mapper.map_to_mitre(event_record, profile)
+    apt_detector.analyze_profile(profile, mitre_mapper.detected_techniques)
+    correlation_engine.correlate_threats(employee_tracker.get_all_activities(), events)
 
     # 2. If score >= 70, trigger intelligence matching and self-healing
     if score >= 70:
@@ -91,7 +119,8 @@ def handle_events():
                         req_res_name,
                         score,
                         at_risk['name'],
-                        "restricted"
+                        "restricted",
+                        profiler_context=attacker_profiler.get_plain_english_summary(req_ip)
                     )
                     
                     audit_record = {
@@ -103,6 +132,11 @@ def handle_events():
                         "explanation": explanation
                     }
                     audit_log.insert(0, audit_record)
+                    
+                    # Post-heal action: Adaptive Mutation
+                    mutation_record = mutation_engine.mutate(profile)
+                    if mutation_record:
+                        events[0]["mutation"] = mutation_record
 
     return jsonify({"status": "success", "record": event_record})
 
@@ -113,6 +147,71 @@ def get_audit():
 @app.route("/status", methods=["GET"])
 def get_status():
     return jsonify(system_status)
+
+# MITRE, APT, Honeypots, DevSecOps Endpoints
+@app.route("/mitre/summary", methods=["GET"])
+def get_mitre_summary():
+    return jsonify(mitre_mapper.get_technique_summary())
+
+@app.route("/apt/suspects", methods=["GET"])
+def get_apt_suspects():
+    return jsonify(apt_detector.get_suspects())
+
+@app.route("/devsecops/coverage", methods=["GET"])
+def get_devsecops_coverage():
+    return jsonify(devsecops_manager.get_coverage())
+
+@app.route("/devsecops/coverage-summary", methods=["GET"])
+def get_devsecops_summary():
+    return jsonify(devsecops_manager.get_coverage_summary())
+
+@app.route("/honeypots", methods=["GET"])
+def get_honeypots():
+    return jsonify(honeypot_manager.get_active_honeypots())
+
+@app.route("/profiles", methods=["GET"])
+def get_profiles():
+    # Helper to return all profiler summaries
+    profs = []
+    for ip, profile in attacker_profiler.profiles.items():
+        summary = profile.copy()
+        summary["ip"] = ip
+        profs.append(summary)
+    return jsonify(profs)
+
+# Insider + External Correlation Endpoints
+@app.route("/employee-access", methods=["POST"])
+def post_employee_access():
+    payload = request.get_json() or {}
+    employee_id = payload.get("employee_id")
+    resource = payload.get("resource")
+    access_type = payload.get("type", "read")
+    timestamp = payload.get("timestamp", time.time())
+    
+    if not employee_id or not resource:
+        return jsonify({"status": "error", "message": "Missing employee_id or resource"}), 400
+        
+    record = employee_tracker.log_employee_access(employee_id, resource, access_type, timestamp)
+    correlations = correlation_engine.correlate_threats(employee_tracker.get_all_activities(), events)
+    
+    high_risk_count = len([c for c in correlations if c.get("correlation_score", 0) >= 60])
+    
+    return jsonify({"status": "success", "record": record, "high_risk_correlations": high_risk_count})
+
+@app.route("/correlations", methods=["GET"])
+def get_correlations():
+    min_score = int(request.args.get("min_score", 0))
+    if min_score > 0:
+        return jsonify(correlation_engine.get_high_risk_correlations(min_score))
+    return jsonify(correlation_engine.correlations)
+
+@app.route("/employees", methods=["GET"])
+def get_employees():
+    return jsonify(employee_tracker.get_all_employees())
+
+@app.route("/employee/<employee_id>", methods=["GET"])
+def get_employee(employee_id):
+    return jsonify(employee_tracker.get_employee_profile(employee_id))
 
 @app.route("/rollback", methods=["POST"])
 def post_rollback():
