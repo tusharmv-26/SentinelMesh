@@ -96,6 +96,7 @@ def handle_events():
     event_record = {
         "id": len(events) + 1,
         "timestamp": datetime.datetime.fromtimestamp(ts).strftime('%H:%M:%S'),
+        "raw_timestamp": ts,
         "attacker_ip": req_ip,
         "resource_name": req_res_name,
         "method": req_method,
@@ -106,7 +107,8 @@ def handle_events():
         "escalation_probability": profile.get("escalation_probability", 0),
         "threat_level": profile.get("threat_level", "LOW"),
         "ip_enrichment": enrichment,
-        "trinity_intel": payload.get("trinity_intel", None)
+        "trinity_intel": payload.get("trinity_intel", None),
+        "simulated_technique": payload.get("simulated_technique", "UNKNOWN")
     }
     
     events.insert(0, event_record)

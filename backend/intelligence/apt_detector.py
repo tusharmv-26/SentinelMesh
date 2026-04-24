@@ -43,7 +43,7 @@ class APTDetector:
         history = self.ip_history[ip]
         resource_name = event.get("resource_name", "")
         technique = event.get("simulated_technique", "Unknown")
-        timestamp = event.get("timestamp", time.time())
+        timestamp = event.get("raw_timestamp", time.time())
         
         # Record this access
         history["sessions"].append({
@@ -82,7 +82,13 @@ class APTDetector:
             apt_score += 65
             indicators.append("RAPID_MULTI_STAGE_PROGRESSION")
             
-        # APT Indicator 5: Specific Resource Targeting
+        # APT Indicator 5: High Frequency Probing (Demo Booster)
+        # If the user clicks *any* technique 3 times, trigger the APT dashboard
+        if history["total_probes"] >= 3:
+            apt_score += 55
+            indicators.append("HIGH_FREQUENCY_PROBING")
+            
+        # APT Indicator 6: Specific Resource Targeting
         if self._detect_specific_targeting(history):
             apt_score += 20
             indicators.append("SPECIFIC_RESOURCE_TARGETING")

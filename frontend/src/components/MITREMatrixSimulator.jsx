@@ -83,7 +83,7 @@ const MITREMatrixSimulator = ({ serverUrl }) => {
       
       const data = await res.json();
       if (res.ok) {
-        setSuccessMsg(`Simulated attacker chose ${technique.id}. Honeypot [${data.honeypot.resource_name}] deployed to trap them!`);
+        setSuccessMsg(`Simulated attacker chose ${technique.id}. Apex Trap [${data.intel.resource_name}] engaged to capture intent!`);
         setTimeout(() => setSuccessMsg(null), 5000);
       }
     } catch (e) {

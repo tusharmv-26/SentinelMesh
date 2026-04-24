@@ -64,11 +64,11 @@ const APTSuspects = ({ serverUrl }) => {
                 key={suspect.ip}
                 style={{
                   background: 'rgba(255, 255, 255, 0.05)',
-                  border: `2px solid ${getClassificationColor(suspect.classification)}66`,
+                  border: `2px solid ${getClassificationColor(suspect.apt_classification)}66`,
                   borderRadius: '8px',
                   padding: '12px',
                   backdropFilter: 'blur(10px)',
-                  boxShadow: `0 0 12px ${getClassificationColor(suspect.classification)}22`
+                  boxShadow: `0 0 12px ${getClassificationColor(suspect.apt_classification)}22`
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -87,8 +87,8 @@ const APTSuspects = ({ serverUrl }) => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
-                      background: `${getClassificationColor(suspect.classification)}22`,
-                      color: getClassificationColor(suspect.classification),
+                      background: `${getClassificationColor(suspect.apt_classification)}22`,
+                      color: getClassificationColor(suspect.apt_classification),
                       padding: '4px 8px',
                       borderRadius: '4px',
                       fontSize: '10px',
@@ -100,25 +100,25 @@ const APTSuspects = ({ serverUrl }) => {
                         width: '6px',
                         height: '6px',
                         borderRadius: '50%',
-                        backgroundColor: getClassificationColor(suspect.classification),
-                        animation: suspect.classification === 'CONFIRMED_APT_PATTERN' ? 'pulse 2s infinite' : 'none'
+                        backgroundColor: getClassificationColor(suspect.apt_classification),
+                        animation: suspect.apt_classification === 'CONFIRMED_APT_PATTERN' ? 'pulse 2s infinite' : 'none'
                       }}
                     />
-                    {getClassificationLabel(suspect.classification)}
+                    {getClassificationLabel(suspect.apt_classification)}
                   </div>
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                   <div>
                     <div style={{ fontSize: '10px', color: '#9CA3AF' }}>APT Score</div>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: getClassificationColor(suspect.classification) }}>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: getClassificationColor(suspect.apt_classification) }}>
                       {suspect.apt_score}/100
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: '10px', color: '#9CA3AF' }}>Events</div>
                     <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#E5E7EB' }}>
-                      {suspect.event_count}
+                      {suspect.total_probes}
                     </div>
                   </div>
                 </div>
@@ -131,12 +131,12 @@ const APTSuspects = ({ serverUrl }) => {
                         <span
                           key={idx}
                           style={{
-                            background: `${getClassificationColor(suspect.classification)}11`,
-                            color: getClassificationColor(suspect.classification),
+                            background: `${getClassificationColor(suspect.apt_classification)}11`,
+                            color: getClassificationColor(suspect.apt_classification),
                             padding: '2px 6px',
                             borderRadius: '3px',
                             fontSize: '9px',
-                            border: `1px solid ${getClassificationColor(suspect.classification)}33`
+                            border: `1px solid ${getClassificationColor(suspect.apt_classification)}33`
                           }}
                         >
                           {ind}
