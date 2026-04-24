@@ -146,3 +146,40 @@ class HoneypotManager:
             "deception_mode_count": deception_mode,
             "honeypots": self.get_all_honeypots()
         }
+
+    def create_dynamic_honeypot(self, technique_id: str, technique_name: str, tactic: str) -> Dict:
+        """
+        Dynamically generates a honeypot tailored to a specific MITRE technique.
+        This fulfills the requirement of 'trapping the attacker on any path'.
+        """
+        honeypot_id = f"dynamic-{technique_id.lower()}-{int(time.time())}"
+        
+        # Generate a convincing resource name based on the technique
+        resource_keywords = {
+            "T1566": "employee-phishing-inbox",
+            "T1078": "admin-sso-portal",
+            "T1110": "ssh-gateway-logs",
+            "T1552": "vault-secrets-backup",
+            "T1530": "s3-customer-data-lake",
+            "T1059": "powershell-execution-policy",
+            "T1098": "iam-role-manager"
+        }
+        
+        # Default fallback name
+        resource_name = resource_keywords.get(technique_id, f"internal-service-{technique_id.lower()}")
+        
+        new_honeypot = {
+            "id": honeypot_id,
+            "name": f"Trap for {technique_id}: {technique_name}",
+            "type": "DYNAMIC_TRAP",
+            "resource_name": resource_name,
+            "description": f"Dynamically synthesized honeypot to trap {tactic} attempts.",
+            "created_at": time.time(),
+            "total_hits": 0,
+            "last_accessed": None,
+            "mode": "ACTIVE",
+            "threat_level": "HIGH"
+        }
+        
+        self.honeypots[honeypot_id] = new_honeypot
+        return new_honeypot

@@ -5,12 +5,22 @@ import datetime
 import random
 import urllib.request
 import json
+import threading
 
 from intelligence import (
-    RiskEngine, SimilarityEngine, AttackerProfiler, enrich_ip, MutationEngine,
+    SimilarityEngine, AttackerProfiler, enrich_ip, MutationEngine,
     MITREMapper, APTDetector, DevSecOpsManager, HoneypotManager,
     EmployeeActivityTracker, InsiderExternalCorrelationEngine
 )
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml"))
+try:
+    from ml_risk_engine import MLRiskEngine
+except ImportError:
+    print("Warning: ml_risk_engine not found, falling back.")
+    MLRiskEngine = None
+
 from aws_client import AWSController
 from grok_client import GrokClient
 
@@ -18,7 +28,14 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Initialize engines
-risk_engine = RiskEngine()
+if MLRiskEngine:
+    risk_engine = MLRiskEngine()
+else:
+    # Fallback to dummy
+    class DummyRisk:
+        def calculate_score(self, ip, res, *args, **kwargs): return 10
+    risk_engine = DummyRisk()
+    
 similarity_engine = SimilarityEngine()
 attacker_profiler = AttackerProfiler()
 mutation_engine = MutationEngine()
@@ -52,14 +69,15 @@ def handle_events():
     req_method = payload.get("method", "GET")
     ts = payload.get("timestamp") or time.time()
     
-    # 1. Calculate risk score
-    score = risk_engine.calculate_score(req_ip, req_res_name)
+    # 1. Calculate risk score using ML
+    score = risk_engine.calculate_score(req_ip, req_res_name, payload, None, honeypot_manager)
     
     # Update system tracking
     system_status["total_events"] += 1
-    if score > system_status["peak_score"]:
-        system_status["peak_score"] = score
-        
+    # For demo purposes, we want the risk gauge to actively reflect the current simulated attacker's risk
+    # rather than a lifetime historical peak that never goes down.
+    system_status["peak_score"] = score
+    
     status_badge = "Healthy"
     if score >= 70:
         system_status["status"] = "Healing active"
@@ -154,12 +172,12 @@ def get_mitre_summary():
     return jsonify(mitre_mapper.get_technique_summary())
 
 @app.route("/apt/suspects", methods=["GET"])
-def get_apt_suspects():
-    return jsonify(apt_detector.get_suspects())
+def get_apt_suspects_endpoint():
+    return jsonify(apt_detector.get_apt_suspects())
 
 @app.route("/devsecops/coverage", methods=["GET"])
 def get_devsecops_coverage():
-    return jsonify(devsecops_manager.get_coverage())
+    return jsonify(devsecops_manager.get_coverage_report())
 
 @app.route("/devsecops/coverage-summary", methods=["GET"])
 def get_devsecops_summary():
@@ -167,7 +185,7 @@ def get_devsecops_summary():
 
 @app.route("/honeypots", methods=["GET"])
 def get_honeypots():
-    return jsonify(honeypot_manager.get_active_honeypots())
+    return jsonify(honeypot_manager.get_all_honeypots())
 
 @app.route("/profiles", methods=["GET"])
 def get_profiles():
@@ -205,13 +223,21 @@ def get_correlations():
         return jsonify(correlation_engine.get_high_risk_correlations(min_score))
     return jsonify(correlation_engine.correlations)
 
-@app.route("/employees", methods=["GET"])
-def get_employees():
-    return jsonify(employee_tracker.get_all_employees())
+
+@app.route("/ml/feature-importance", methods=["GET"])
+def get_ml_features():
+    if hasattr(risk_engine, "get_feature_importance"):
+        return jsonify(risk_engine.get_feature_importance())
+    return jsonify({})
+
 
 @app.route("/employee/<employee_id>", methods=["GET"])
 def get_employee(employee_id):
     return jsonify(employee_tracker.get_employee_profile(employee_id))
+
+@app.route("/employees", methods=["GET"])
+def get_employees():
+    return jsonify(employee_tracker.get_all_employees())
 
 @app.route("/rollback", methods=["POST"])
 def post_rollback():
@@ -279,6 +305,52 @@ def post_demo():
     }
     urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:8000/events", json.dumps(e2).encode('utf-8'), {'Content-Type': 'application/json'}))
     return jsonify({"status": "demo sequence triggered"})
+
+@app.route("/simulate-mitre-path", methods=["POST"])
+def simulate_mitre_path():
+    payload = request.get_json() or {}
+    technique_id = payload.get("technique_id")
+    technique_name = payload.get("technique_name", "Unknown Technique")
+    tactic = payload.get("tactic", "Unknown Tactic")
+    
+    if not technique_id:
+        return jsonify({"status": "error", "message": "Missing technique_id"}), 400
+        
+    # 1. Create a dynamic honeypot designed for this technique
+    new_honeypot = honeypot_manager.create_dynamic_honeypot(technique_id, technique_name, tactic)
+    
+    # 2. Simulate an attacker hitting it
+    ts = time.time()
+    # Use a constant IP for the simulated attacker so the ML model tracks their path progression
+    ip = "192.168.101.99"
+    
+    # 3. Create a synthetic event
+    event = {
+        "attacker_ip": ip,
+        "resource_name": new_honeypot["resource_name"],
+        "method": "POST",
+        "timestamp": ts,
+        "simulated_technique": technique_id
+    }
+    
+    # 4. Fire the event via an internal request or directly
+    def fire_event():
+        try:
+            urllib.request.urlopen(urllib.request.Request(
+                "http://127.0.0.1:8000/events", 
+                json.dumps(event).encode('utf-8'), 
+                {'Content-Type': 'application/json'}
+            ))
+        except Exception as e:
+            print(f"Error firing simulated event: {e}")
+            
+    threading.Thread(target=fire_event).start()
+        
+    return jsonify({
+        "status": "success", 
+        "message": f"Synthesized honeypot for {technique_id} and trapped simulated attacker.",
+        "honeypot": new_honeypot
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)

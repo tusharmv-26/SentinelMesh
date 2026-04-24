@@ -4,6 +4,7 @@ const PanelAttackerIntelligence = () => {
     const [profiles, setProfiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [aptData, setAptData] = useState({});
+    const [mlFeatures, setMlFeatures] = useState({});
 
     const fetchProfiles = async () => {
         try {
@@ -31,9 +32,20 @@ const PanelAttackerIntelligence = () => {
         }
     };
 
+    const fetchMlFeatures = async () => {
+        try {
+            const res = await fetch('http://localhost:8000/ml/feature-importance');
+            const data = await res.json();
+            setMlFeatures(data);
+        } catch (err) {
+            console.error("Error fetching ML features:", err);
+        }
+    };
+
     useEffect(() => {
         fetchProfiles();
         fetchAptData();
+        fetchMlFeatures();
         const interval = setInterval(() => {
             fetchProfiles();
             fetchAptData();
@@ -91,6 +103,29 @@ const PanelAttackerIntelligence = () => {
 
     return (
         <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', padding: '16px 8px 24px 8px', gap: '16px', overflowY: 'auto' }}>
+            {/* ML Feature Importance Chart */}
+            {Object.keys(mlFeatures).length > 0 && (
+                <div className="panel" style={{ padding: '16px', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--accent-cyan)', marginBottom: '12px' }}>
+                        🤖 ML Risk Engine - Learned Feature Importance
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
+                        {Object.entries(mlFeatures)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 4)
+                            .map(([key, val]) => (
+                            <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{key.replace(/_/g, ' ')}</div>
+                                <div style={{ width: '100%', height: '6px', background: 'var(--bg-surface-raised)', borderRadius: '3px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${Math.min(val * 100, 100)}%`, height: '100%', background: 'var(--accent-cyan)' }}></div>
+                                </div>
+                                <div style={{ fontSize: '9px', color: 'var(--text-mono)' }}>{(val * 100).toFixed(1)}%</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+            
             {profiles.length === 0 ? (
                 <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ textAlign: 'center' }}>

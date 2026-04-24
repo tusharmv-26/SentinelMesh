@@ -24,8 +24,8 @@ const PanelRiskGauge = ({ systemStatus }) => {
       </div>
       <div style={{ flex: 1, position: 'relative', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         
-        <div style={{ flex: 1, width: '100%', minHeight: 200 }}>
-          <ResponsiveContainer width="100%" height="100%" debounce={300}>
+        <div style={{ flex: 1, width: '100%', minHeight: 200, position: 'relative' }}>
+          <ResponsiveContainer width="100%" height={200} debounce={300}>
             <RadialBarChart 
               cx="50%" 
               cy="50%" 

@@ -109,6 +109,14 @@ class MITREMapper:
         behavior_type = profile.get("behavior_type", "").upper()
         is_tor = event.get("ip_enrichment", {}).get("is_tor", False)
         
+        simulated_technique = event.get("simulated_technique")
+        if simulated_technique:
+            techniques.append(self._create_match(
+                simulated_technique,
+                confidence="HIGH",
+                reason="Interactive dynamic simulation"
+            ))
+        
         # Discovery Tactic (TA0007)
         # T1580: Cloud Infrastructure Discovery - any cloud resource probe
         if "s3" in resource_name or "ec2" in resource_name or "rds" in resource_name or "bucket" in resource_name:

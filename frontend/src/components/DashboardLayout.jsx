@@ -6,9 +6,9 @@ import PanelAuditLog from './PanelAuditLog';
 import PanelAttackerIntelligence from './PanelAttackerIntelligence';
 import PanelCorrelations from './PanelCorrelations';
 import PanelHoneypots from './PanelHoneypots';
-import MITREHeatmap from './MITREHeatmap';
 import APTSuspects from './APTSuspects';
 import DevSecOpsCoverage from './DevSecOpsCoverage';
+import MITREMatrixSimulator from './MITREMatrixSimulator';
 
 const DashboardLayout = ({ events, auditLog, systemStatus }) => {
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -28,7 +28,7 @@ const DashboardLayout = ({ events, auditLog, systemStatus }) => {
         </div>
 
         <nav style={{ flex: 1 }}>
-          {['Dashboard', 'Attacker Intelligence', 'Live Events', 'Audit Log', 'Insider Threats', 'Honeypots', 'MITRE Heatmap', 'APT Activity', 'DevSecOps', 'System Parameters'].map((nav) => {
+          {['Dashboard', 'Attacker Intelligence', 'Live Events', 'Audit Log', 'Insider Threats', 'Honeypots', 'MITRE Simulator', 'APT Activity', 'DevSecOps', 'System Parameters'].map((nav) => {
             const isActive = activeTab === nav;
             return (
             <div key={nav} 
@@ -117,14 +117,16 @@ const DashboardLayout = ({ events, auditLog, systemStatus }) => {
               <PanelHoneypots serverUrl="http://localhost:8000" />
             </div>
             <div style={{ minHeight: 0, minWidth: 0, overflow: 'hidden' }}>
-              <MITREHeatmap serverUrl="http://localhost:8000" />
+              {/* MITRE Heatmap removed per user request */}
             </div>
           </div>
         )}
 
-        {activeTab === 'MITRE Heatmap' && (
+
+
+        {activeTab === 'MITRE Simulator' && (
           <div style={{ flex: 1, padding: '16px', overflow: 'hidden' }}>
-            <MITREHeatmap serverUrl="http://localhost:8000" />
+            <MITREMatrixSimulator serverUrl="http://localhost:8000" />
           </div>
         )}
 
