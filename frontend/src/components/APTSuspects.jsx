@@ -32,17 +32,17 @@ const APTSuspects = ({ serverUrl }) => {
   }, [serverUrl]);
 
   const getClassificationColor = (classification) => {
-    if (classification === 'CONFIRMED_APT_PATTERN') {
-      return '#DC2626'; // Red
-    }
-    return '#EF4444'; // Orange-red
+    if (classification === 'CONFIRMED_APT_PATTERN') return '#DC2626'; // Red
+    if (classification === 'SUSPECTED_APT') return '#EF4444'; // Orange-red
+    if (classification === 'ELEVATED_RISK') return '#F59E0B'; // Amber
+    return '#3B82F6'; // Blue for Monitoring
   };
 
   const getClassificationLabel = (classification) => {
-    if (classification === 'CONFIRMED_APT_PATTERN') {
-      return 'CONFIRMED APT';
-    }
-    return 'SUSPECTED APT';
+    if (classification === 'CONFIRMED_APT_PATTERN') return 'CONFIRMED APT';
+    if (classification === 'SUSPECTED_APT') return 'SUSPECTED APT';
+    if (classification === 'ELEVATED_RISK') return 'ELEVATED RISK';
+    return 'MONITORING';
   };
 
   return (

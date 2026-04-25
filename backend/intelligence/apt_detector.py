@@ -97,11 +97,13 @@ class APTDetector:
         apt_score = min(apt_score, 100)
         
         # Classify APT level
-        apt_classification = "NONE"
+        apt_classification = "MONITORING"
         if apt_score >= 75:
             apt_classification = "CONFIRMED_APT_PATTERN"
         elif apt_score >= 50:
             apt_classification = "SUSPECTED_APT"
+        elif apt_score >= 20:
+            apt_classification = "ELEVATED_RISK"
         
         history["apt_score"] = apt_score
         history["apt_classification"] = apt_classification
@@ -183,15 +185,15 @@ class APTDetector:
         
         return False
     
-    def get_apt_suspects(self, min_score: int = 50) -> List[Dict]:
+    def get_apt_suspects(self, min_score: int = 0) -> List[Dict]:
         """Get all IPs classified as APT threats"""
         suspects = []
         
         for ip, history in self.ip_history.items():
-            apt_classification = history.get("apt_classification", "NONE")
+            apt_classification = history.get("apt_classification", "MONITORING")
             apt_score = history.get("apt_score", 0)
             
-            if apt_classification != "NONE" and apt_score >= min_score:
+            if apt_score >= min_score:
                 suspects.append({
                     "ip": ip,
                     "apt_score": apt_score,
