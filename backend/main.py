@@ -113,7 +113,7 @@ def handle_events():
     # Feed to intelligence modules
     mitre_mapper.map_to_mitre(event_record, profile)
     apt_detector.update(req_ip, event_record, profile)
-    correlation_engine.correlate_threats(employee_tracker.get_all_activities(), events)
+
 
     # 2. If score >= 70, trigger intelligence matching and self-healing
     if score >= 70:
