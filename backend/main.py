@@ -9,8 +9,7 @@ import threading
 
 from intelligence import (
     SimilarityEngine, AttackerProfiler, enrich_ip, MutationEngine,
-    MITREMapper, APTDetector, HoneypotManager,
-    EmployeeActivityTracker, InsiderExternalCorrelationEngine
+    MITREMapper, APTDetector, HoneypotManager
 )
 import sys
 import os
@@ -42,8 +41,6 @@ mutation_engine = MutationEngine()
 mitre_mapper = MITREMapper()
 apt_detector = APTDetector()
 honeypot_manager = HoneypotManager()
-employee_tracker = EmployeeActivityTracker()
-correlation_engine = InsiderExternalCorrelationEngine()
 
 aws_client = AWSController()
 grok_client = GrokClient()
@@ -191,32 +188,6 @@ def get_profiles():
         profs.append(summary)
     return jsonify(profs)
 
-# Insider + External Correlation Endpoints
-@app.route("/employee-access", methods=["POST"])
-def post_employee_access():
-    payload = request.get_json() or {}
-    employee_id = payload.get("employee_id")
-    resource = payload.get("resource")
-    access_type = payload.get("type", "read")
-    timestamp = payload.get("timestamp", time.time())
-    
-    if not employee_id or not resource:
-        return jsonify({"status": "error", "message": "Missing employee_id or resource"}), 400
-        
-    record = employee_tracker.log_employee_access(employee_id, resource, access_type, timestamp)
-    correlations = correlation_engine.correlate_threats(employee_tracker.get_all_activities(), events)
-    
-    high_risk_count = len([c for c in correlations if c.get("correlation_score", 0) >= 60])
-    
-    return jsonify({"status": "success", "record": record, "high_risk_correlations": high_risk_count})
-
-@app.route("/correlations", methods=["GET"])
-def get_correlations():
-    min_score = int(request.args.get("min_score", 0))
-    if min_score > 0:
-        return jsonify(correlation_engine.get_high_risk_correlations(min_score))
-    return jsonify(correlation_engine.correlations)
-
 
 @app.route("/ml/feature-importance", methods=["GET"])
 def get_ml_features():
@@ -224,14 +195,6 @@ def get_ml_features():
         return jsonify(risk_engine.get_feature_importance())
     return jsonify({})
 
-
-@app.route("/employee/<employee_id>", methods=["GET"])
-def get_employee(employee_id):
-    return jsonify(employee_tracker.get_employee_profile(employee_id))
-
-@app.route("/employees", methods=["GET"])
-def get_employees():
-    return jsonify(employee_tracker.get_all_employees())
 
 @app.route("/rollback", methods=["POST"])
 def post_rollback():
@@ -351,44 +314,7 @@ def simulate_mitre_path():
         "intel": intel_package
     })
 
-@app.route("/webhooks/external-honeypot", methods=["POST"])
-def external_honeypot_webhook():
-    """Receives payloads from Cowrie, Thinkst Canary, and Dionaea"""
-    payload = request.get_json() or {}
-    
-    attacker_ip = payload.get("src_ip", f"192.168.100.{random.randint(10,250)}")
-    honeypot_id = payload.get("honeypot_id")
-    
-    if not honeypot_id:
-        return jsonify({"status": "error", "message": "Missing honeypot_id"}), 400
-        
-    hp = honeypot_manager.get_honeypot(honeypot_id)
-    if not hp:
-        return jsonify({"status": "error", "message": "Unknown honeypot"}), 404
-        
-    # Create internal event
-    event = {
-        "attacker_ip": attacker_ip,
-        "resource_name": hp["resource_name"],
-        "method": "POST",
-        "timestamp": time.time(),
-        "simulated_technique": payload.get("technique", "T1078")
-    }
-    
-    # Fire event internally to trigger ML risk engine
-    def fire_event():
-        try:
-            urllib.request.urlopen(urllib.request.Request(
-                "http://127.0.0.1:8000/events", 
-                json.dumps(event).encode('utf-8'), 
-                {'Content-Type': 'application/json'}
-            ))
-        except Exception as e:
-            print(f"Error firing external webhook event: {e}")
-            
-    threading.Thread(target=fire_event).start()
-    
-    return jsonify({"status": "success", "message": f"Webhook processed for {hp['integration_type']} honeypot"})
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000, debug=True)

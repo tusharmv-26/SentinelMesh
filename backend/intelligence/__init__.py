@@ -71,11 +71,8 @@ from .mutation_engine import MutationEngine
 from .mitre_mapper import MITREMapper
 from .apt_detector import APTDetector
 from .honeypot_manager import HoneypotManager
-from .employee_tracker import EmployeeActivityTracker
-from .correlation_engine import InsiderExternalCorrelationEngine
 
 __all__ = [
     'RiskEngine', 'SimilarityEngine', 'AttackerProfiler', 'enrich_ip', 'MutationEngine',
-    'MITREMapper', 'APTDetector', 'HoneypotManager', 
-    'EmployeeActivityTracker', 'InsiderExternalCorrelationEngine'
+    'MITREMapper', 'APTDetector', 'HoneypotManager'
 ]
