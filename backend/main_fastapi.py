@@ -10,8 +10,6 @@ from intelligence import RiskEngine, SimilarityEngine
 from intelligence.attacker_profiler import AttackerProfiler
 from intelligence.ip_enricher import enrich_ip
 from intelligence.mutation_engine import MutationEngine
-from intelligence.employee_tracker import EmployeeActivityTracker
-from intelligence.correlation_engine import InsiderExternalCorrelationEngine
 from intelligence.honeypot_manager import HoneypotManager
 from intelligence.mitre_mapper import MITREMapper
 from intelligence.apt_detector import APTDetector
@@ -43,8 +41,6 @@ aws_client = AWSController()
 grok_client = GrokClient()
 attacker_profiler = AttackerProfiler()
 mutation_engine = MutationEngine()
-employee_tracker = EmployeeActivityTracker()
-correlation_engine = InsiderExternalCorrelationEngine()
 honeypot_manager = HoneypotManager()
 mitre_mapper = MITREMapper()
 apt_detector = APTDetector()
@@ -436,81 +432,7 @@ def get_profile(ip: str):
         }
     )
 
-@app.post("/employee-access")
-async def log_employee_access(request: Request):
-    """Log employee accessing a resource (for insider threat tracking)"""
-    payload = await request.json()
-    
-    employee_id = payload.get("employee_id")
-    resource = payload.get("resource")
-    access_type = payload.get("type")
-    timestamp = payload.get("timestamp") or time.time()
-    
-    # Log the access
-    access_record = employee_tracker.log_employee_access(
-        employee_id, resource, access_type, timestamp
-    )
-    
-    # Check for correlations with external attacks
-    correlations = correlation_engine.correlate_threats(
-        [access_record],
-        events
-    )
-    
-    high_risk_count = len([c for c in correlations if c["correlation_score"] >= 70])
-    
-    if high_risk_count > 0:
-        system_status["status"] = "Insider Threat Detected"
-        system_status["total_healing"] += 1
-    
-    return {
-        "status": "logged",
-        "record": access_record,
-        "correlations_detected": high_risk_count
-    }
 
-@app.get("/correlations")
-def get_correlations(min_score: int = 70):
-    """Get insider + external threat correlations"""
-    high_risk = correlation_engine.get_high_risk_correlations(min_score)
-    return JSONResponse(
-        content=high_risk,
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0"
-        }
-    )
-
-@app.get("/employee/{employee_id}")
-def get_employee_profile(employee_id: str):
-    """Get risk profile for specific employee"""
-    profile = employee_tracker.get_employee_profile(employee_id)
-    return JSONResponse(
-        content=profile,
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0"
-        }
-    )
-
-@app.get("/employees")
-def get_all_employees():
-    """Get all tracked employees and their risk levels"""
-    employees = []
-    for emp_id in employee_tracker.employee_logs.keys():
-        profile = employee_tracker.get_employee_profile(emp_id)
-        employees.append(profile)
-    
-    return JSONResponse(
-        content=sorted(employees, key=lambda x: x["avg_risk_score"], reverse=True),
-        headers={
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0"
-        }
-    )
 
 # ============================================================================
 # NEW FEATURE ENDPOINTS: Honeypots, MITRE, APT, ML, DevSecOps
